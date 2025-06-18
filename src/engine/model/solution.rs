@@ -384,6 +384,23 @@ impl Solution {
             .map(|m| m.get_material().to_string())
     }
 
+    /// Получить структурный идентификатор решения для удаления дубликатов
+    pub fn get_structure_identifier(&self) -> String {
+        let mut identifiers = Vec::new();
+        
+        for mosaic in &self.mosaics {
+            identifiers.push(mosaic.get_root_tile_node().to_string_identifier());
+        }
+        
+        identifiers.sort();
+        identifiers.join("|")
+    }
+
+    /// Получить наибольшую неиспользуемую площадь плитки
+    pub fn get_biggest_unused_tile_area(&self) -> i64 {
+        self.get_biggest_area()
+    }
+
     /// Попытаться разместить деталь в решении
     pub fn try_place_tile(&mut self, tile_to_place: &TileDimensions) -> Result<Vec<Solution>, crate::error::CuttingError> {
         let mut new_solutions = Vec::new();
