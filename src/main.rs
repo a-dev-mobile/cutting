@@ -36,7 +36,6 @@ fn main() {
     println!("-------------------------------");
     
     let mut placed_count = 0;
-    let mut total_used_area = 0i64;
     
     for tile in &tiles {
         println!("Размещаем плитку ID {}: {}x{} мм...", tile.id, tile.width, tile.height);
@@ -44,7 +43,6 @@ fn main() {
         match CuttingEngine::try_place_tile(&mut sheet, tile) {
             Ok(true) => {
                 placed_count += 1;
-                total_used_area += tile.get_area();
                 println!("  ✅ Успешно размещена{}", if sheet.get_final_tile_nodes().last().map_or(false, |n| n.is_rotated) { " (повернута)" } else { "" });
             }
             Ok(false) => {

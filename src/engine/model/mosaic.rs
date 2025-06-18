@@ -4,7 +4,7 @@ use crate::engine::cutting::CuttingEngine;
 use crate::error::CuttingError;
 
 /// Мозаика - представляет один лист материала с размещенными деталями и разрезами
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Mosaic {
     /// Корневой узел дерева размещения
     pub root_tile_node: TileNode,
@@ -431,6 +431,69 @@ impl Mosaic {
     /// Создать копию мозаики
     pub fn copy(&self) -> Mosaic {
         self.clone()
+    }
+
+    /// Получить коэффициент использования площади (неизменяемая версия)
+    pub fn get_used_area_ratio(&self) -> f64 {
+        let total_area = self.get_total_area();
+        if total_area == 0 {
+            return 0.0;
+        }
+        // Используем клон для получения мутабельной версии
+        let mut mosaic_clone = self.clone();
+        mosaic_clone.get_used_area() as f64 / total_area as f64
+    }
+
+    /// Получить финальные тайлы (алиас для get_final_tile_nodes)
+    pub fn get_final_tiles(&self) -> Result<Vec<&TileNode>, CuttingError> {
+        Ok(self.get_final_tile_nodes())
+    }
+
+    /// Получить максимальную глубину дерева
+    pub fn get_max_depth(&self) -> i32 {
+        self.calculate_max_depth(&self.root_tile_node)
+    }
+
+    /// Рекурсивно вычислить максимальную глубину
+    fn calculate_max_depth(&self, node: &TileNode) -> i32 {
+        if node.child1.is_none() && node.child2.is_none() {
+            return 1;
+        }
+
+        let mut max_depth = 0;
+        if let Some(ref child1) = node.child1 {
+            max_depth = max_depth.max(self.calculate_max_depth(child1));
+        }
+        if let Some(ref child2) = node.child2 {
+            max_depth = max_depth.max(self.calculate_max_depth(child2));
+        }
+
+        max_depth + 1
+    }
+
+    /// Получить набор различных тайлов
+    pub fn get_distinct_tile_set(&self) -> Vec<i32> {
+        let hashset = self.root_tile_node.get_distinct_tile_set();
+        hashset.into_iter().collect()
+    }
+
+    /// Получить самую большую площадь среди неиспользуемых узлов
+    pub fn get_biggest_area(&self) -> i64 {
+        self.get_biggest_unused_tile()
+            .map(|tile| tile.get_area())
+            .unwrap_or(0)
+    }
+
+    /// Получить используемую площадь (неизменяемая версия)
+    pub fn get_used_area_immutable(&self) -> i64 {
+        let mut mosaic_clone = self.clone();
+        mosaic_clone.get_used_area()
+    }
+
+    /// Получить неиспользуемую площадь (неизменяемая версия)
+    pub fn get_unused_area_immutable(&self) -> i64 {
+        let mut mosaic_clone = self.clone();
+        mosaic_clone.get_unused_area()
     }
 }
 
