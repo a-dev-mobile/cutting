@@ -3,12 +3,13 @@ use crate::engine::stock::StockSolution;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Serialize, Deserialize};
 
 /// Атомарный счетчик для уникальных ID решений
 static ID_COUNTER: AtomicI32 = AtomicI32::new(0);
 
 /// Решение раскроя - коллекция мозаик с размещенными деталями
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Solution {
     /// Уникальный ID решения
     id: i32,

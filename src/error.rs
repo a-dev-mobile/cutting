@@ -61,6 +61,34 @@ pub enum CuttingError {
     OperationCancelled(String),
     /// Превышено время ожидания
     Timeout(String),
+    
+    // Ошибки сервиса
+    /// Неверные плитки
+    InvalidTiles(String),
+    /// Неверные стоковые плитки
+    InvalidStockTiles(String),
+    /// Слишком много панелей
+    TooManyPanels(usize),
+    /// Слишком много стоковых панелей
+    TooManyStockPanels(usize),
+    /// Слишком много цифр в размерах
+    TooManyDigits(usize),
+    /// Задача уже выполняется
+    TaskAlreadyRunning(String),
+    /// Задача не найдена
+    TaskNotFound(String),
+    /// Неверное состояние задачи
+    InvalidTaskState(String),
+    /// Сервис не инициализирован
+    ServiceNotInitialized,
+    /// Сервис уже инициализирован
+    ServiceAlreadyInitialized,
+    /// Ошибка отправки задачи
+    TaskSubmissionFailed(String),
+    /// Ошибка оптимизации
+    OptimizationFailed(String),
+    /// Задача остановлена
+    TaskStopped(String),
 }
 
 impl fmt::Display for CuttingError {
@@ -95,6 +123,45 @@ impl fmt::Display for CuttingError {
             }
             CuttingError::Timeout(msg) => {
                 write!(f, "Timeout error: {}", msg)
+            }
+            CuttingError::InvalidTiles(msg) => {
+                write!(f, "Invalid tiles: {}", msg)
+            }
+            CuttingError::InvalidStockTiles(msg) => {
+                write!(f, "Invalid stock tiles: {}", msg)
+            }
+            CuttingError::TooManyPanels(count) => {
+                write!(f, "Too many panels: {}", count)
+            }
+            CuttingError::TooManyStockPanels(count) => {
+                write!(f, "Too many stock panels: {}", count)
+            }
+            CuttingError::TooManyDigits(count) => {
+                write!(f, "Too many digits: {}", count)
+            }
+            CuttingError::TaskAlreadyRunning(client_id) => {
+                write!(f, "Task already running for client: {}", client_id)
+            }
+            CuttingError::TaskNotFound(task_id) => {
+                write!(f, "Task not found: {}", task_id)
+            }
+            CuttingError::InvalidTaskState(msg) => {
+                write!(f, "Invalid task state: {}", msg)
+            }
+            CuttingError::ServiceNotInitialized => {
+                write!(f, "Service not initialized")
+            }
+            CuttingError::ServiceAlreadyInitialized => {
+                write!(f, "Service already initialized")
+            }
+            CuttingError::TaskSubmissionFailed(msg) => {
+                write!(f, "Task submission failed: {}", msg)
+            }
+            CuttingError::OptimizationFailed(msg) => {
+                write!(f, "Optimization failed: {}", msg)
+            }
+            CuttingError::TaskStopped(task_id) => {
+                write!(f, "Task stopped: {}", task_id)
             }
         }
     }

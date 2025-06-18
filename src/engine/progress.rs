@@ -1,10 +1,11 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 use crate::engine::utils::Utils;
 
 /// Статус выполнения задачи
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskStatus {
     /// Задача в очереди
     Queued,

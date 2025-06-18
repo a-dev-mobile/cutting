@@ -2,12 +2,14 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::thread::{self, JoinHandle};
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
 use crate::engine::progress::{ProgressTracker, TaskInfo, TaskStatus};
 use crate::engine::model::solution::Solution;
 use crate::error::CuttingError;
 
 /// Приоритет выполнения задачи
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum TaskPriority {
     /// Низкий приоритет
     Low = 0,
@@ -37,7 +39,7 @@ impl From<TaskPriority> for u8 {
 }
 
 /// Результат выполнения задачи
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaskResult {
     /// Задача выполнена успешно с результатом
     Success(Vec<Solution>),
@@ -48,7 +50,7 @@ pub enum TaskResult {
 }
 
 /// Отчет о выполнении задачи
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskReport {
     /// Идентификатор задачи
     pub task_id: String,
@@ -57,22 +59,28 @@ pub struct TaskReport {
     /// Статус выполнения
     pub status: TaskStatus,
     /// Результат выполнения
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<TaskResult>,
     /// Время начала выполнения
-    pub start_time: Option<Instant>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<DateTime<Utc>>,
     /// Время завершения
-    pub end_time: Option<Instant>,
-    /// Продолжительность выполнения
-    pub duration: Option<Duration>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_time: Option<DateTime<Utc>>,
+    /// Продолжительность выполнения в миллисекундах
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
     /// Процент выполнения
     pub progress_percentage: u8,
     /// Дополнительная информация
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<String>,
     /// Приоритет задачи
     pub priority: TaskPriority,
     /// Количество найденных решений
     pub solutions_count: usize,
     /// Использованная память (в байтах)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_used: Option<u64>,
     /// Ошибки, возникшие во время выполнения
     pub errors: Vec<String>,
@@ -88,7 +96,7 @@ impl TaskReport {
             result: None,
             start_time: None,
             end_time: None,
-            duration: None,
+            duration_ms: None,
             progress_percentage: 0,
             details: None,
             priority: TaskPriority::Normal,
@@ -101,9 +109,9 @@ impl TaskReport {
     /// Обновляет отчет из TaskInfo
     pub fn update_from_task_info(&mut self, task_info: &TaskInfo) {
         self.status = task_info.status;
-        self.start_time = task_info.start_time;
-        self.end_time = task_info.end_time;
-        self.duration = task_info.get_duration();
+        self.start_time = task_info.start_time.map(|_| Utc::now());
+        self.end_time = task_info.end_time.map(|_| Utc::now());
+        self.duration_ms = task_info.get_duration().map(|d| d.as_millis() as u64);
         self.progress_percentage = task_info.progress_percentage;
         self.details = task_info.details.clone();
         self.priority = TaskPriority::from(task_info.priority);
@@ -122,9 +130,7 @@ impl TaskReport {
     
     /// Получает продолжительность выполнения в миллисекундах
     pub fn get_duration_millis(&self) -> u64 {
-        self.duration
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0)
+        self.duration_ms.unwrap_or(0)
     }
     
     /// Добавляет ошибку в отчет
@@ -142,8 +148,8 @@ impl TaskReport {
             TaskStatus::Cancelled => "Отменена",
         };
         
-        let duration_str = if let Some(duration) = self.duration {
-            format!(" ({})", crate::engine::utils::Utils::format_duration(duration.as_millis() as u64))
+        let duration_str = if let Some(duration_ms) = self.duration_ms {
+            format!(" ({})", crate::engine::utils::Utils::format_duration(duration_ms))
         } else {
             String::new()
         };
@@ -197,7 +203,7 @@ impl Task {
         // Обновляем статус на "выполняется"
         if let Ok(mut report) = self.report.lock() {
             report.status = TaskStatus::Running;
-            report.start_time = Some(start_time);
+            report.start_time = Some(Utc::now());
         }
         
         // Выполняем задачу
@@ -206,8 +212,8 @@ impl Task {
         
         // Обновляем отчет с результатами
         if let Ok(mut report) = self.report.lock() {
-            report.end_time = Some(end_time);
-            report.duration = Some(end_time.duration_since(start_time));
+            report.end_time = Some(Utc::now());
+            report.duration_ms = Some(end_time.duration_since(start_time).as_millis() as u64);
             
             match result {
                 Ok(solutions) => {
@@ -471,18 +477,16 @@ impl RunningTasks {
     /// Получает среднее время выполнения успешных задач
     pub fn get_average_execution_time(&self) -> Duration {
         if let Ok(reports) = self.completed_reports.lock() {
-            let successful_durations: Vec<Duration> = reports.iter()
+            let successful_durations: Vec<u64> = reports.iter()
                 .filter(|r| r.is_successful())
-                .filter_map(|r| r.duration)
+                .filter_map(|r| r.duration_ms)
                 .collect();
             
             if successful_durations.is_empty() {
                 return Duration::from_secs(0);
             }
             
-            let total_millis: u64 = successful_durations.iter()
-                .map(|d| d.as_millis() as u64)
-                .sum();
+            let total_millis: u64 = successful_durations.iter().sum();
             
             Duration::from_millis(total_millis / successful_durations.len() as u64)
         } else {

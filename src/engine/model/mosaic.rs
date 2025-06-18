@@ -2,9 +2,10 @@ use crate::engine::model::tile::{TileNode, TileDimensions};
 use crate::engine::model::cut::Cut;
 use crate::engine::cutting::CuttingEngine;
 use crate::error::CuttingError;
+use serde::{Serialize, Deserialize};
 
 /// Мозаика - представляет один лист материала с размещенными деталями и разрезами
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Mosaic {
     /// Корневой узел дерева размещения
     pub root_tile_node: TileNode,

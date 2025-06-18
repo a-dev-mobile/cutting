@@ -1,8 +1,9 @@
 use crate::types::{next_id, DEFAULT_MATERIAL};
 use std::collections::HashSet;
+use serde::{Serialize, Deserialize};
 
 /// Базовый прямоугольник с координатами
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
     pub x1: i32,
     pub x2: i32,
@@ -58,7 +59,7 @@ impl Tile {
 }
 
 /// Размеры панели с материалом
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TileDimensions {
     pub id: i32,
     pub width: i32,
@@ -198,7 +199,7 @@ impl std::hash::Hash for TileDimensions {
 impl Eq for TileDimensions {}
 
 /// Узел бинарного дерева для представления прямоугольной области
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileNode {
     pub id: i32,
     pub tile: Tile,

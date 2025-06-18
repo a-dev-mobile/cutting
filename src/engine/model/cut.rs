@@ -1,12 +1,14 @@
+use serde::{Deserialize, Serialize};
+
 /// Тип разреза
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CutType {
     Horizontal,
     Vertical,
 }
 
 /// Информация о разрезе
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Cut {
     pub x1: i32,
     pub y1: i32,
