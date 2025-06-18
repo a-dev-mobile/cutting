@@ -75,40 +75,8 @@ impl PermutationThreadSpawner {
         // Запускаем задачу через менеджер
         self.running_tasks.submit_task(task)?;
         
-        // Создаем поток для мониторинга
-        let threads = Arc::clone(&self.threads);
-        let progress_tracker = Arc::clone(&self.progress_tracker);
-        let running_tasks = Arc::clone(&self.running_tasks);
-        let shutdown = Arc::clone(&self.shutdown);
-        
-        let handle = thread::spawn(move || {
-            // Мониторим выполнение задачи
-            loop {
-                // Проверяем флаг остановки
-                if let Ok(shutdown_flag) = shutdown.lock() {
-                    if *shutdown_flag {
-                        break;
-                    }
-                }
-                
-                // Обновляем состояние завершенных потоков
-                running_tasks.update_completed_threads();
-                
-                // Небольшая пауза
-                thread::sleep(Duration::from_millis(100));
-                
-                // Проверяем, завершилась ли наша задача
-                let progress_report = progress_tracker.generate_report();
-                if progress_report.completed_tasks > 0 {
-                    break;
-                }
-            }
-        });
-        
-        // Добавляем handle в список потоков
-        if let Ok(mut threads_list) = self.threads.lock() {
-            threads_list.push(handle);
-        }
+        // Небольшая пауза, чтобы задача успела зарегистрироваться
+        thread::sleep(Duration::from_millis(10));
         
         Ok(())
     }
@@ -208,7 +176,7 @@ impl PermutationThreadSpawner {
     
     /// Получает отчет о прогрессе выполнения
     pub fn get_progress_report(&self) -> crate::engine::progress::ProgressReport {
-        self.progress_tracker.generate_report()
+        self.running_tasks.get_progress_report()
     }
     
     /// Получает статистику выполнения

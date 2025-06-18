@@ -39,6 +39,11 @@ impl StockSolution {
         &self.stock_tile_dimensions
     }
 
+    /// Получить список панелей (алиас для совместимости)
+    pub fn get_panels(&self) -> &Vec<TileDimensions> {
+        &self.stock_tile_dimensions
+    }
+
     /// Установить список стоковых панелей
     pub fn set_stock_tile_dimensions(&mut self, stock_tile_dimensions: Vec<TileDimensions>) {
         self.stock_tile_dimensions = stock_tile_dimensions;

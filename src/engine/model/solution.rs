@@ -327,6 +327,26 @@ impl Solution {
             .sum()
     }
 
+    /// Получить количество разрезов (алиас для совместимости)
+    pub fn get_cuts_count(&self) -> i32 {
+        self.get_nbr_cuts()
+    }
+
+    /// Получить общее количество разрезов (алиас для совместимости)
+    pub fn get_total_cuts_count(&self) -> i32 {
+        self.get_nbr_cuts()
+    }
+
+    /// Получить потраченную площадь (алиас для get_unused_area)
+    pub fn get_wasted_area(&self) -> i64 {
+        self.get_unused_area()
+    }
+
+    /// Получить общую потраченную площадь (алиас для get_unused_area)
+    pub fn get_total_wasted_area(&self) -> i64 {
+        self.get_unused_area()
+    }
+
     /// Получить размер различного набора плиток
     pub fn get_distinct_tile_set(&self) -> i32 {
         self.mosaics.iter()
