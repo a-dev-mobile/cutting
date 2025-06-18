@@ -2,7 +2,6 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::thread::{self, JoinHandle};
 use std::collections::VecDeque;
-use crate::engine::progress::{ProgressTracker, TaskInfo, TaskStatus};
 use crate::engine::tasks::{Task, TaskPriority, RunningTasks};
 use crate::engine::model::solution::Solution;
 use crate::error::CuttingError;
@@ -18,8 +17,6 @@ pub struct PermutationThreadSpawner {
     interval_between_max_alive_check: u64,
     /// Список всех созданных потоков
     threads: Arc<Mutex<Vec<JoinHandle<()>>>>,
-    /// Трекер прогресса выполнения
-    progress_tracker: Arc<ProgressTracker>,
     /// Менеджер задач
     running_tasks: Arc<RunningTasks>,
     /// Флаг остановки
@@ -39,7 +36,6 @@ impl PermutationThreadSpawner {
             max_alive_spawner_threads,
             interval_between_max_alive_check,
             threads: Arc::new(Mutex::new(Vec::new())),
-            progress_tracker: Arc::new(ProgressTracker::new(interval_between_max_alive_check)),
             running_tasks: Arc::new(RunningTasks::new(max_alive_spawner_threads)),
             shutdown: Arc::new(Mutex::new(false)),
             thread_counter: Arc::new(Mutex::new(0)),

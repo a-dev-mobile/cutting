@@ -133,9 +133,6 @@ impl Arrangement {
     where
         T: Clone,
     {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-        
         if list.is_empty() || count == 0 {
             return vec![];
         }

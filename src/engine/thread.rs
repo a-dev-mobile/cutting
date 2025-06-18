@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::collections::HashSet;
-use crate::engine::model::{solution::Solution, tile::TileDimensions, mosaic::Mosaic, cut::Cut};
+use crate::engine::model::{solution::Solution, tile::TileDimensions};
 use crate::engine::stock::stock_solution::StockSolution;
 use crate::engine::comparator::SolutionComparator;
 use crate::error::CuttingError;
@@ -186,37 +186,6 @@ impl CutListThread {
         self.percentage_done = 100;
         
         Ok(())
-    }
-    
-    /// Пытается разместить деталь в мозаике (упрощенная версия)
-    fn try_place_tile_in_mosaic(&self, tile: &TileDimensions, mosaic: &Mosaic) -> Result<Vec<Mosaic>, CuttingError> {
-        let mut results = Vec::new();
-        
-        // Пробуем разместить деталь в исходной ориентации
-        match mosaic.add(tile, false) {
-            Ok(new_mosaics) => {
-                results.extend(new_mosaics);
-            }
-            Err(_) => {
-                // Не удалось разместить в исходной ориентации
-            }
-        }
-        
-        // Если деталь не квадратная и не учитываем направление волокон,
-        // пробуем повернуть на 90 градусов
-        if !tile.is_square() && !self.consider_grain_direction {
-            let rotated_tile = TileDimensions::simple(tile.height, tile.width);
-            match mosaic.add(&rotated_tile, false) {
-                Ok(new_mosaics) => {
-                    results.extend(new_mosaics);
-                }
-                Err(_) => {
-                    // Не удалось разместить и в повернутом виде
-                }
-            }
-        }
-        
-        Ok(results)
     }
     
     /// Удаляет дублирующиеся решения
