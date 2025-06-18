@@ -47,8 +47,20 @@ pub enum CuttingError {
     },
     /// Узел уже занят
     NodeAlreadyOccupied,
+    /// Ошибка работы с потоками
+    ThreadError(String),
+    /// Ошибка генерации перестановок
+    PermutationError(String),
     /// Общая ошибка разрезания
     GeneralCuttingError(String),
+    /// Ошибка ограничения ресурсов
+    ResourceLimit(String),
+    /// Ошибка валидации входных данных
+    InvalidInput(String),
+    /// Операция была отменена
+    OperationCancelled(String),
+    /// Превышено время ожидания
+    Timeout(String),
 }
 
 impl fmt::Display for CuttingError {
@@ -63,8 +75,26 @@ impl fmt::Display for CuttingError {
             CuttingError::NodeAlreadyOccupied => {
                 write!(f, "Node is already occupied")
             }
+            CuttingError::ThreadError(msg) => {
+                write!(f, "Thread error: {}", msg)
+            }
+            CuttingError::PermutationError(msg) => {
+                write!(f, "Permutation error: {}", msg)
+            }
             CuttingError::GeneralCuttingError(msg) => {
                 write!(f, "Cutting error: {}", msg)
+            }
+            CuttingError::ResourceLimit(msg) => {
+                write!(f, "Resource limit error: {}", msg)
+            }
+            CuttingError::InvalidInput(msg) => {
+                write!(f, "Invalid input error: {}", msg)
+            }
+            CuttingError::OperationCancelled(msg) => {
+                write!(f, "Operation cancelled: {}", msg)
+            }
+            CuttingError::Timeout(msg) => {
+                write!(f, "Timeout error: {}", msg)
             }
         }
     }
