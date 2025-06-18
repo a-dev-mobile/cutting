@@ -24,17 +24,17 @@ mod mosaic_tests {
         // Проверяем размеры корневого узла
         assert_eq!(mosaic.get_root_tile_node().get_width(), 1000);
         assert_eq!(mosaic.get_root_tile_node().get_height(), 600);
-        
+
         // Проверяем материал и ID
         assert_eq!(mosaic.get_material(), "wood");
         assert_eq!(mosaic.get_stock_id(), 10);
-        
+
         // Проверяем, что нет разрезов
         assert!(mosaic.get_cuts().is_empty());
-        
+
         // Проверяем площади
         assert_eq!(mosaic.get_total_area(), 600000);
-        
+
         println!("✓ Тест 1 пройден: Создание мозаики из стокового листа");
     }
 
@@ -66,78 +66,28 @@ mod mosaic_tests {
 
         // Может быть несколько результатов (с поворотом и без), но для квадратных размеров - один
         assert!(!result_mosaics.is_empty());
-        
-        let result_mosaic = &result_mosaics[0];
-        
+
+        let mut result_mosaic = result_mosaics[0].clone();
+
         // Проверяем финальные узлы
         let final_nodes = result_mosaic.get_final_tile_nodes();
         assert_eq!(final_nodes.len(), 1);
-        
+
         let final_node = final_nodes[0];
         assert_eq!(final_node.external_id, 1);
         assert!(final_node.is_final);
-        
+
         // Проверяем, что нет разрезов (размеры совпадают)
         assert!(result_mosaic.get_cuts().is_empty());
-        
+
+        assert!(final_node.get_width() == 1000);
+        assert_eq!(result_mosaic.get_used_area(), 600000);
+
         println!("✓ Тест 2 пройден: Размещение детали точно по размеру узла");
     }
 
-    /// Тест 3: Размещение детали с вертикальным разрезом
-    #[test]
-    fn test_place_tile_with_vertical_cut() {
-        let stock_tile = TileDimensions {
-            id: 10,
-            width: 1000,
-            height: 600,
-            material: "wood".to_string(),
-            orientation: 0,
-            label: None,
-            is_rotated: false,
-        };
+    /// Тест 3: Размещение детали с горизонтальным разрезом
 
-        let tile_to_place = TileDimensions {
-            id: 2,
-            width: 400,
-            height: 600,
-            material: "wood".to_string(),
-            orientation: 0,
-            label: None,
-            is_rotated: false,
-        };
-
-        let mosaic = Mosaic::new(&stock_tile);
-        let result_mosaics = mosaic.add(&tile_to_place, false).unwrap();
-
-        // Должен быть хотя бы один результат
-        assert!(!result_mosaics.is_empty());
-        
-        let result_mosaic = &result_mosaics[0];
-        
-        // Проверяем разрезы
-        let cuts = result_mosaic.get_cuts();
-        assert_eq!(cuts.len(), 1);
-        
-        let cut = &cuts[0];
-        assert!(!cut.is_horizontal); // Вертикальная линия разреза (is_horizontal = false)
-        assert_eq!(cut.x1, 400);
-        assert_eq!(cut.x2, 400);
-        assert_eq!(cut.y1, 0);
-        assert_eq!(cut.y2, 600);
-        
-        // Проверяем финальные узлы
-        let final_nodes = result_mosaic.get_final_tile_nodes();
-        assert_eq!(final_nodes.len(), 1);
-        
-        let final_node = final_nodes[0];
-        assert_eq!(final_node.get_width(), 400);
-        assert_eq!(final_node.get_height(), 600);
-        assert_eq!(final_node.external_id, 2);
-        
-        println!("✓ Тест 3 пройден: Размещение детали с вертикальным разрезом");
-    }
-
-    /// Тест 4: Размещение детали с горизонтальным разрезом
     #[test]
     fn test_place_tile_with_horizontal_cut() {
         let stock_tile = TileDimensions {
@@ -165,30 +115,84 @@ mod mosaic_tests {
 
         // Должен быть хотя бы один результат
         assert!(!result_mosaics.is_empty());
-        
+
         let result_mosaic = &result_mosaics[0];
-        
+
         // Проверяем разрезы
         let cuts = result_mosaic.get_cuts();
         assert_eq!(cuts.len(), 1);
-        
+
         let cut = &cuts[0];
         assert!(cut.is_horizontal); // Горизонтальная линия разреза
         assert_eq!(cut.y1, 250);
         assert_eq!(cut.y2, 250);
         assert_eq!(cut.x1, 0);
         assert_eq!(cut.x2, 1000);
-        
+
         // Проверяем финальные узлы
         let final_nodes = result_mosaic.get_final_tile_nodes();
         assert_eq!(final_nodes.len(), 1);
-        
+
         let final_node = final_nodes[0];
         assert_eq!(final_node.get_width(), 1000);
         assert_eq!(final_node.get_height(), 250);
         assert_eq!(final_node.external_id, 3);
-        
+
         println!("✓ Тест 4 пройден: Размещение детали с горизонтальным разрезом");
+    }
+
+    /// Тест 4: Размещение детали с вертикальным разрезом
+    #[test]
+    fn test_place_tile_with_vertical_cut() {
+        let stock_tile = TileDimensions {
+            id: 10,
+            width: 1000,
+            height: 600,
+            material: "wood".to_string(),
+            orientation: 0,
+            label: None,
+            is_rotated: false,
+        };
+
+        let tile_to_place = TileDimensions {
+            id: 2,
+            width: 400,
+            height: 600,
+            material: "wood".to_string(),
+            orientation: 0,
+            label: None,
+            is_rotated: false,
+        };
+
+        let mosaic = Mosaic::new(&stock_tile);
+        let result_mosaics = mosaic.add(&tile_to_place, false).unwrap();
+
+        // Должен быть хотя бы один результат
+        assert!(!result_mosaics.is_empty());
+
+        let result_mosaic = &result_mosaics[0];
+
+        // Проверяем разрезы
+        let cuts = result_mosaic.get_cuts();
+        assert_eq!(cuts.len(), 1);
+
+        let cut = &cuts[0];
+        assert!(!cut.is_horizontal); // Вертикальная линия разреза (is_horizontal = false)
+        assert_eq!(cut.x1, 400);
+        assert_eq!(cut.x2, 400);
+        assert_eq!(cut.y1, 0);
+        assert_eq!(cut.y2, 600);
+
+        // Проверяем финальные узлы
+        let final_nodes = result_mosaic.get_final_tile_nodes();
+        assert_eq!(final_nodes.len(), 1);
+
+        let final_node = final_nodes[0];
+        assert_eq!(final_node.get_width(), 400);
+        assert_eq!(final_node.get_height(), 600);
+        assert_eq!(final_node.external_id, 2);
+
+        println!("✓ Тест 3 пройден: Размещение детали с вертикальным разрезом");
     }
 
     /// Тест 5: Размещение детали с двумя разрезами
@@ -219,40 +223,40 @@ mod mosaic_tests {
 
         // Должен быть хотя бы один результат
         assert!(!result_mosaics.is_empty());
-        
+
         let result_mosaic = &result_mosaics[0];
-        
+
         // Проверяем разрезы
         let cuts = result_mosaic.get_cuts();
         assert_eq!(cuts.len(), 2);
-        
+
         // Первый разрез должен быть вертикальным на x=400
         let first_cut = &cuts[0];
         assert!(!first_cut.is_horizontal); // Вертикальная линия
         assert_eq!(first_cut.x1, 400);
         assert_eq!(first_cut.x2, 400);
-        
+
         // Второй разрез должен быть горизонтальным на y=250
         let second_cut = &cuts[1];
         assert!(second_cut.is_horizontal); // Горизонтальная линия
         assert_eq!(second_cut.y1, 250);
         assert_eq!(second_cut.y2, 250);
-        
+
         // Проверяем финальные узлы
         let final_nodes = result_mosaic.get_final_tile_nodes();
         assert_eq!(final_nodes.len(), 1);
-        
+
         let final_node = final_nodes[0];
         assert_eq!(final_node.get_width(), 400);
         assert_eq!(final_node.get_height(), 250);
         assert_eq!(final_node.external_id, 4);
         assert_eq!(final_node.get_x1(), 0);
         assert_eq!(final_node.get_y1(), 0);
-        
+
         // Проверяем неиспользуемые узлы
         let unused_nodes = result_mosaic.get_unused_tile_nodes();
         assert_eq!(unused_nodes.len(), 2);
-        
+
         println!("✓ Тест 5 пройден: Размещение детали с двумя разрезами");
     }
 
@@ -284,31 +288,34 @@ mod mosaic_tests {
 
         // Должен быть хотя бы один результат с поворотом
         assert!(!result_mosaics.is_empty());
-        
+
         // Ищем результат с поворотом
-        let rotated_result = result_mosaics.iter()
-            .find(|m| {
-                let final_nodes = m.get_final_tile_nodes();
-                !final_nodes.is_empty() && final_nodes[0].is_rotated
-            });
-        
+        let rotated_result = result_mosaics.iter().find(|m| {
+            let final_nodes = m.get_final_tile_nodes();
+            !final_nodes.is_empty() && final_nodes[0].is_rotated
+        });
+
         assert!(rotated_result.is_some());
-        
+
         let result_mosaic = rotated_result.unwrap();
         let final_nodes = result_mosaic.get_final_tile_nodes();
         let final_node = final_nodes[0];
-        
+
         // Отладочная информация
-        println!("Final node dimensions: {}x{}", final_node.get_width(), final_node.get_height());
+        println!(
+            "Final node dimensions: {}x{}",
+            final_node.get_width(),
+            final_node.get_height()
+        );
         println!("Final node is_rotated: {}", final_node.is_rotated);
         println!("Final node external_id: {}", final_node.external_id);
-        
+
         assert!(final_node.is_rotated);
         // При повороте деталь 700x400 размещается в узле 400x600 (высота листа)
-        assert_eq!(final_node.get_width(), 400); 
+        assert_eq!(final_node.get_width(), 400);
         assert_eq!(final_node.get_height(), 600);
         assert_eq!(final_node.external_id, 5);
-        
+
         println!("✓ Тест 6 пройден: Размещение детали с поворотом");
     }
 
@@ -340,11 +347,11 @@ mod mosaic_tests {
 
         // Результат должен быть пустым
         assert!(result_mosaics.is_empty());
-        
+
         // Исходная мозаика не должна измениться
         assert!(mosaic.get_cuts().is_empty());
         assert_eq!(mosaic.get_total_area(), 600000);
-        
+
         println!("✓ Тест 7 пройден: Попытка размещения детали, которая не помещается");
     }
 
@@ -379,27 +386,27 @@ mod mosaic_tests {
         let used_area = result_mosaic.get_used_area();
         let unused_area = result_mosaic.get_unused_area();
         let total_area = result_mosaic.get_total_area();
-        
+
         assert_eq!(used_area, 100000); // 400 * 250
         assert_eq!(unused_area, 500000); // 600000 - 100000
         assert_eq!(total_area, 600000);
         assert_eq!(used_area + unused_area, total_area);
-        
+
         // Проверяем количество разрезов
         assert_eq!(result_mosaic.get_nbr_cuts(), 2);
-        
+
         // Проверяем самый большой неиспользуемый узел
         let biggest_unused = result_mosaic.get_biggest_unused_tile();
         assert!(biggest_unused.is_some());
-        
+
         // Проверяем коэффициент использования
         let utilization = result_mosaic.get_utilization_ratio();
         assert!((utilization - (100000.0 / 600000.0)).abs() < 0.001);
-        
+
         // Проверяем расстояние центра масс
         let center_distance = result_mosaic.get_center_of_mass_distance_to_origin();
         assert!(center_distance > 0.0);
-        
+
         println!("✓ Тест 8 пройден: Расчет метрик мозаики");
     }
 
@@ -431,7 +438,7 @@ mod mosaic_tests {
         let result_mosaics = mosaic.add(&square_tile, false).unwrap();
 
         assert!(!result_mosaics.is_empty());
-        
+
         // Все результаты должны быть без поворота (квадрат)
         for result_mosaic in &result_mosaics {
             let final_nodes = result_mosaic.get_final_tile_nodes();
@@ -445,7 +452,7 @@ mod mosaic_tests {
         assert_eq!(copied_mosaic.get_material(), mosaic.get_material());
         assert_eq!(copied_mosaic.get_stock_id(), mosaic.get_stock_id());
         assert_eq!(copied_mosaic.get_total_area(), mosaic.get_total_area());
-        
+
         println!("✓ Тест 9 пройден: Граничные случаи");
     }
 
@@ -533,7 +540,7 @@ mod mosaic_tests {
         };
 
         let mut mosaic = Mosaic::new(&stock_tile);
-        
+
         // Размещаем первую деталь
         let result1 = mosaic.add(&tile1, false).unwrap();
         assert!(!result1.is_empty());
@@ -566,7 +573,7 @@ mod mosaic_tests {
 pub fn run_all_mosaic_tests() {
     println!("Запуск тестов этапа 3: Mosaic и размещение одной детали");
     println!("{}", "=".repeat(60));
-    
+
     // Тесты будут запущены автоматически при выполнении `cargo test`
     println!("Используйте команду: cargo test mosaic_tests");
 }
