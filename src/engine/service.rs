@@ -176,10 +176,6 @@ impl CutListOptimizerServiceImpl {
 
     /// Проверяет, может ли клиент запустить новую задачу
     fn can_client_start_task(&self, client_id: &str, max_tasks: usize) -> bool {
-        if self.allow_multiple_tasks_per_client {
-            return true;
-        }
-
         if let Ok(client_tasks) = self.client_tasks.lock() {
             if let Some(tasks) = client_tasks.get(client_id) {
                 return tasks.len() < max_tasks;
@@ -200,6 +196,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Удаляет задачу у клиента
+    #[allow(dead_code)]
     fn remove_task_from_client(&self, client_id: &str, task_id: &str) {
         if let Ok(mut client_tasks) = self.client_tasks.lock() {
             if let Some(tasks) = client_tasks.get_mut(client_id) {
@@ -212,6 +209,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Вычисляет задачу оптимизации
+    #[allow(dead_code)]
     fn compute(&self, request: CalculationRequest, task_id: String) {
         let client_id = request.client_info.id.clone();
         let logger = Arc::clone(&self.cut_list_logger);
@@ -323,6 +321,14 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
     fn submit_task(&mut self, request: CalculationRequest) -> Result<CalculationSubmissionResult, CuttingError> {
         let client_id = &request.client_info.id;
         
+        // Валидируем конфигурацию
+        if !request.configuration.is_valid() {
+            return Ok(CalculationSubmissionResult::error(
+                StatusCode::InvalidTiles, 
+                Some("Неверная конфигурация".to_string())
+            ));
+        }
+        
         // Проверяем производительные пороги
         let performance_thresholds = request.configuration.performance_thresholds
             .as_ref()
@@ -339,13 +345,13 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         }
 
         // Валидируем панели
-        let (panel_count, panel_status) = self.validate_panels(&request.panels);
+        let (_panel_count, panel_status) = self.validate_panels(&request.panels);
         if panel_status != StatusCode::Ok {
             return Ok(CalculationSubmissionResult::error(panel_status, None));
         }
 
         // Валидируем складские панели
-        let (stock_count, stock_status) = self.validate_stock_panels(&request.stock_panels);
+        let (_stock_count, stock_status) = self.validate_stock_panels(&request.stock_panels);
         if stock_status != StatusCode::Ok {
             return Ok(CalculationSubmissionResult::error(stock_status, None));
         }
@@ -372,11 +378,13 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         let logger_clone = Arc::clone(&self.cut_list_logger);
         let running_tasks_clone = Arc::clone(&self.running_tasks);
         let client_tasks_clone = Arc::clone(&self.client_tasks);
+        let task_info_clone = Arc::clone(&self.task_info);
         
         thread::spawn(move || {
             // Клонируем переменные для использования в замыкании задачи
             let task_id_for_task = task_id_clone.clone();
             let logger_for_task = Arc::clone(&logger_clone);
+            let task_info_for_task = Arc::clone(&task_info_clone);
             
             // Создаем задачу для выполнения
             let task = Task::new(
@@ -386,9 +394,29 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
                 move || {
                     logger_for_task.info(&format!("Начало выполнения задачи {}", task_id_for_task));
                     
+                    // Обновляем статус задачи
+                    if let Ok(mut task_info_map) = task_info_for_task.lock() {
+                        if let Some(info) = task_info_map.get_mut(&task_id_for_task) {
+                            info.status = ServiceTaskStatus::Running;
+                            info.progress_percentage = 50;
+                        }
+                    }
+                    
+                    // Имитируем работу
+                    thread::sleep(std::time::Duration::from_millis(100));
+                    
                     // Здесь будет основная логика оптимизации
                     // Пока что возвращаем пустой результат
                     let solutions = vec![Solution::new()];
+                    
+                    // Обновляем статус задачи на завершенную
+                    if let Ok(mut task_info_map) = task_info_for_task.lock() {
+                        if let Some(info) = task_info_map.get_mut(&task_id_for_task) {
+                            info.status = ServiceTaskStatus::Completed;
+                            info.progress_percentage = 100;
+                            info.end_time = Some(Utc::now());
+                        }
+                    }
                     
                     logger_for_task.info(&format!("Задача {} завершена успешно", task_id_for_task));
                     Ok(solutions)
@@ -405,6 +433,14 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
                         if tasks.is_empty() {
                             client_tasks.remove(&client_id_clone);
                         }
+                    }
+                }
+                
+                // Обновляем статус задачи на ошибку
+                if let Ok(mut task_info_map) = task_info_clone.lock() {
+                    if let Some(info) = task_info_map.get_mut(&task_id_clone) {
+                        info.status = ServiceTaskStatus::Error;
+                        info.end_time = Some(Utc::now());
                     }
                 }
             }
@@ -481,13 +517,34 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         let active_count = self.running_tasks.get_active_task_count();
         let completed_count = self.running_tasks.get_completed_task_count();
         
+        // Подсчитываем задачи по статусам из нашего task_info
+        let mut running_tasks = 0u64;
+        let mut idle_tasks = 0u64;
+        let mut finished_tasks = 0u64;
+        let mut stopped_tasks = 0u64;
+        let mut terminated_tasks = 0u64;
+        let mut error_tasks = 0u64;
+        
+        if let Ok(task_info) = self.task_info.lock() {
+            for info in task_info.values() {
+                match info.status {
+                    ServiceTaskStatus::Running => running_tasks += 1,
+                    ServiceTaskStatus::Idle => idle_tasks += 1,
+                    ServiceTaskStatus::Completed => finished_tasks += 1,
+                    ServiceTaskStatus::Stopped => stopped_tasks += 1,
+                    ServiceTaskStatus::Terminated => terminated_tasks += 1,
+                    ServiceTaskStatus::Error => error_tasks += 1,
+                }
+            }
+        }
+        
         Ok(Stats {
-            nbr_running_tasks: active_count as u64,
-            nbr_idle_tasks: 0,
-            nbr_finished_tasks: successful as u64,
-            nbr_stopped_tasks: cancelled as u64,
-            nbr_terminated_tasks: 0,
-            nbr_error_tasks: failed as u64,
+            nbr_running_tasks: running_tasks + (active_count as u64),
+            nbr_idle_tasks: idle_tasks,
+            nbr_finished_tasks: finished_tasks + (successful as u64),
+            nbr_stopped_tasks: stopped_tasks + (cancelled as u64),
+            nbr_terminated_tasks: terminated_tasks,
+            nbr_error_tasks: error_tasks + (failed as u64),
             nbr_running_threads: active_count as i32,
             nbr_queued_threads: 0,
             nbr_finished_threads: completed_count as u64,
@@ -514,18 +571,14 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
 }
 
 /// Синглтон экземпляр сервиса (как в Java реализации)
-static mut INSTANCE: Option<CutListOptimizerServiceImpl> = None;
-static INIT: std::sync::Once = std::sync::Once::new();
+static INSTANCE: std::sync::OnceLock<std::sync::Mutex<CutListOptimizerServiceImpl>> = std::sync::OnceLock::new();
 
 impl CutListOptimizerServiceImpl {
     /// Получает синглтон экземпляр сервиса
-    pub fn get_instance(logger: Arc<dyn CutListLogger>) -> &'static mut Self {
-        unsafe {
-            INIT.call_once(|| {
-                INSTANCE = Some(CutListOptimizerServiceImpl::new(logger));
-            });
-            INSTANCE.as_mut().unwrap()
-        }
+    pub fn get_instance(logger: Arc<dyn CutListLogger>) -> &'static std::sync::Mutex<CutListOptimizerServiceImpl> {
+        INSTANCE.get_or_init(|| {
+            std::sync::Mutex::new(CutListOptimizerServiceImpl::new(logger))
+        })
     }
 }
 

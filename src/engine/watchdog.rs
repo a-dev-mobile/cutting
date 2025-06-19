@@ -39,6 +39,7 @@ impl Default for WatchDogConfig {
 #[derive(Debug, Clone)]
 struct TaskMonitorInfo {
     /// Идентификатор задачи
+    #[allow(dead_code)]
     task_id: String,
     /// Время начала выполнения
     start_time: Instant,
@@ -388,8 +389,8 @@ impl WatchDog {
         progress_tracker: &Arc<ProgressTracker>,
         running_tasks: &Arc<RunningTasks>,
     ) {
-        let report = progress_tracker.generate_report();
-        let (avg_time, min_time, max_time) = progress_tracker.get_execution_time_statistics();
+        let _report = progress_tracker.generate_report();
+        let (avg_time, _min_time, max_time) = progress_tracker.get_execution_time_statistics();
         
         // Проверяем на аномально долгое выполнение
         if max_time > 0 && avg_time > 0.0 && max_time as f64 > avg_time * 3.0 {
