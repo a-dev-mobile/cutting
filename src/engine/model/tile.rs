@@ -1,6 +1,6 @@
 use crate::types::{next_id, DEFAULT_MATERIAL};
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use serde::{Serialize, Deserialize};
 
 /// Базовый прямоугольник с координатами
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -90,7 +90,21 @@ impl TileDimensions {
             is_rotated: false,
         }
     }
+    /// Проверяет, помещается ли другая плитка в эту
+    pub fn fits(&self, other: &TileDimensions) -> bool {
+        (self.width >= other.width && self.height >= other.height)
+            || (!other.is_square() && self.width >= other.height && self.height >= other.width)
+    }
 
+    /// Поворачивает плитку на 90 градусов
+    pub fn rotate90(&self) -> Self {
+        let mut rotated = self.clone();
+        rotated.width = self.height;
+        rotated.height = self.width;
+        rotated.is_rotated = !self.is_rotated;
+        rotated.orientation = if self.orientation == 0 { 1 } else { 0 };
+        rotated
+    }
     /// Создать новые размеры с полными параметрами включая поворот
     pub fn new_with_rotation(
         id: i32,
@@ -135,20 +149,6 @@ impl TileDimensions {
         (self.width as i64) * (self.height as i64)
     }
 
-    /// Повернуть на 90 градусов
-    pub fn rotate90(&self) -> Self {
-        let new_orientation = if self.orientation == 1 { 2 } else { 1 };
-        Self {
-            id: self.id,
-            width: self.height,
-            height: self.width,
-            material: self.material.clone(),
-            orientation: new_orientation,
-            label: self.label.clone(),
-            is_rotated: true,
-        }
-    }
-
     /// Проверить, является ли квадратом
     pub fn is_square(&self) -> bool {
         self.width == self.height
@@ -163,12 +163,6 @@ impl TileDimensions {
     pub fn has_same_dimensions(&self, other: &TileDimensions) -> bool {
         (self.width == other.width && self.height == other.height)
             || (self.width == other.height && self.height == other.width)
-    }
-
-    /// Проверить, помещается ли другая плитка в эту (с учетом поворота)
-    pub fn fits(&self, other: &TileDimensions) -> bool {
-        (self.width >= other.width && self.height >= other.height)
-            || (self.height >= other.width && self.width >= other.height)
     }
 
     /// Строковое представление размеров
@@ -472,7 +466,11 @@ impl TileNode {
 
     /// Получить количество финальных горизонтальных узлов
     pub fn get_nbr_final_horizontal(&self) -> i32 {
-        let mut count = if self.is_final && self.is_horizontal() { 1 } else { 0 };
+        let mut count = if self.is_final && self.is_horizontal() {
+            1
+        } else {
+            0
+        };
 
         if let Some(ref child1) = self.child1 {
             count += child1.get_nbr_final_horizontal();
@@ -487,7 +485,11 @@ impl TileNode {
 
     /// Получить количество финальных вертикальных узлов
     pub fn get_nbr_final_vertical(&self) -> i32 {
-        let mut count = if self.is_final && self.is_vertical() { 1 } else { 0 };
+        let mut count = if self.is_final && self.is_vertical() {
+            1
+        } else {
+            0
+        };
 
         if let Some(ref child1) = self.child1 {
             count += child1.get_nbr_final_vertical();

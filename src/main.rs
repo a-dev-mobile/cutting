@@ -486,7 +486,7 @@ fn run_demo() {
     
     // Тест горизонтального разреза
     let test_node = TileNode::new(0, 200, 0, 100);
-    match CuttingEngine::split_horizontally(&test_node, 60) {
+    match CuttingEngine::split_horizontally(&test_node, 60, 3) {
         Ok(result) => {
             println!("✅ Горизонтальный разрез: {}x{} → {}x{} + {}x{}", 
                 test_node.get_width(), test_node.get_height(),
@@ -497,7 +497,7 @@ fn run_demo() {
     }
     
     // Тест вертикального разреза
-    match CuttingEngine::split_vertically(&test_node, 120) {
+    match CuttingEngine::split_vertically(&test_node, 120, 3) {
         Ok(result) => {
             println!("✅ Вертикальный разрез: {}x{} → {}x{} + {}x{}", 
                 test_node.get_width(), test_node.get_height(),

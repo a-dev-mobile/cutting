@@ -80,7 +80,7 @@ mod mosaic_tests {
         assert!(result_mosaic.get_cuts().is_empty());
 
         assert!(final_node.get_width() == 1000);
-        assert_eq!(result_mosaic.get_used_area(), 600000);
+        assert_eq!(result_mosaic.get_used_area(), 600000.0);
 
         println!("✓ Тест 2 пройден: Размещение детали точно по размеру узла");
     }
@@ -141,7 +141,7 @@ mod mosaic_tests {
 
         // Проверяем площади
         let mut result_mosaic_mut = result_mosaic.clone();
-        assert_eq!(result_mosaic_mut.get_used_area(), 240000); // 400 * 600
+        assert_eq!(result_mosaic_mut.get_used_area(), 240000.0); // 400 * 600
 
         println!("✓ Тест 3 пройден: Размещение детали с горизонтальным разрезом");
     }
@@ -203,7 +203,7 @@ mod mosaic_tests {
 
         // Проверяем площади
         let mut result_mosaic_mut = result_mosaic.clone();
-        assert_eq!(result_mosaic_mut.get_used_area(), 250000); // 1000 * 250
+        assert_eq!(result_mosaic_mut.get_used_area(), 250000.0); // 1000 * 250
 
         println!("✓ Тест 4 пройден: Размещение детали с вертикальным разрезом");
     }
@@ -273,7 +273,7 @@ mod mosaic_tests {
 
         // Проверяем используемую площадь
         let mut result_mosaic_mut = result_mosaic.clone();
-        assert_eq!(result_mosaic_mut.get_used_area(), 100000); // 400 * 250
+        assert_eq!(result_mosaic_mut.get_used_area(), 100000.0); // 400 * 250
 
         // Проверяем неиспользуемые узлы (должно быть 2)
         let unused_nodes = result_mosaic.get_unused_tile_nodes();
@@ -335,7 +335,7 @@ mod mosaic_tests {
 
         // Проверяем используемую площадь
         let mut result_mosaic_mut = result_mosaic.clone();
-        assert_eq!(result_mosaic_mut.get_used_area(), 240000); // 400 * 600 (ограничена листом)
+        assert_eq!(result_mosaic_mut.get_used_area(), 240000.0); // 400 * 600 (ограничена листом)
 
         // Отладочная информация
         println!(
@@ -386,7 +386,7 @@ mod mosaic_tests {
         assert_eq!(mosaic.get_total_area(), 600000);
 
         // Проверяем, что используемая площадь равна 0
-        assert_eq!(mosaic.get_used_area(), 0);
+        assert_eq!(mosaic.get_used_area(), 0.0);
 
         println!("✓ Тест 7 пройден: Попытка размещения детали, которая не помещается");
     }
@@ -465,7 +465,7 @@ mod mosaic_tests {
         let mut final_mosaic_mut = final_mosaic.clone();
         let total_used_area = final_mosaic_mut.get_used_area();
         let expected_area = (400 * 600) + (300 * 400); // Первая + вторая деталь
-        assert_eq!(total_used_area, expected_area);
+        assert_eq!(total_used_area, expected_area as f64);
 
         println!("✓ Тест 8 пройден: Размещение в уже частично заполненной мозаике");
     }
@@ -502,10 +502,10 @@ mod mosaic_tests {
         let unused_area = result_mosaic.get_unused_area();
         let total_area = result_mosaic.get_total_area();
 
-        assert_eq!(used_area, 100000); // 400 * 250
+        assert_eq!(used_area, 100000.0); // 400 * 250
         assert_eq!(unused_area, 500000); // 600000 - 100000
         assert_eq!(total_area, 600000);
-        assert_eq!(used_area + unused_area, total_area);
+        assert_eq!(used_area + unused_area as f64, total_area as f64);
 
         // Проверяем количество разрезов
         assert_eq!(result_mosaic.get_nbr_cuts(), 2);

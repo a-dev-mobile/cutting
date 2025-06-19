@@ -30,7 +30,15 @@ impl CalculationRequest {
             stock_panels,
         }
     }
-
+   /// Клонирование для многопоточности
+    pub fn clone(&self) -> Self {
+        CalculationRequest {
+            panels: self.panels.clone(),
+            stock_panels: self.stock_panels.clone(),
+            configuration: self.configuration.clone(),
+            client_info: self.client_info.clone(),
+        }
+    }
     /// Возвращает строковое представление панелей
     pub fn tiles_to_string(&self) -> String {
         let mut result = String::new();

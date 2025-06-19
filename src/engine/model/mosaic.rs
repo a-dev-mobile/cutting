@@ -1,8 +1,8 @@
-use crate::engine::model::tile::{TileNode, TileDimensions};
-use crate::engine::model::cut::Cut;
 use crate::engine::cutting::CuttingEngine;
+use crate::engine::model::cut::Cut;
+use crate::engine::model::tile::{TileDimensions, TileNode};
 use crate::error::CuttingError;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Мозаика - представляет один лист материала с размещенными деталями и разрезами
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,7 +33,48 @@ impl Mosaic {
             kerf_width: 3, // Толщина реза по умолчанию
         }
     }
+    /// Создает мозаику из складской панели
+    pub fn new_from_stock(stock_tile: &TileDimensions) -> Self {
+        Mosaic::new(stock_tile)
+    }
 
+    /// Добавляет разрезы к мозаике
+    pub fn add_cuts(&mut self, cuts: Vec<Cut>) {
+        self.cuts.extend(cuts);
+    }
+
+    /// Устанавливает корневой узел
+    pub fn set_root_tile_node(&mut self, root: TileNode) {
+        self.root_tile_node = root;
+    }
+
+    /// Получает количество размещенных плиток в мозаике
+    pub fn get_placed_tiles_count(&self) -> usize {
+        self.root_tile_node.get_nbr_final_tiles() as usize
+    }
+
+
+
+    /// Получает использованную площадь мозаики (неизменяемая версия)
+    pub fn get_used_area(&self) -> f64 {
+        let mut clone = self.clone();
+        clone.get_root_tile_node_mut().get_used_area() as f64
+    }
+
+    /// Получает сигнатуру мозаики для дедупликации
+    pub fn get_signature(&self) -> String {
+        self.root_tile_node.to_string_identifier()
+    }
+
+    /// Получает ориентацию
+    pub fn get_orientation(&self) -> i32 {
+        self.orientation
+    }
+
+    /// Устанавливает ID стокового листа
+    pub fn set_stock_id(&mut self, stock_id: i32) {
+        self.stock_id = stock_id;
+    }
     /// Создать новую мозаику с указанной толщиной реза
     pub fn new_with_kerf(stock_tile: &TileDimensions, kerf_width: i32) -> Self {
         Self {
@@ -71,10 +112,7 @@ impl Mosaic {
         &self.cuts
     }
 
-    /// Получить используемую площадь
-    pub fn get_used_area(&mut self) -> i64 {
-        self.root_tile_node.get_used_area()
-    }
+
 
     /// Получить неиспользуемую площадь
     pub fn get_unused_area(&mut self) -> i64 {
@@ -104,7 +142,8 @@ impl Mosaic {
     /// Получить самый большой неиспользуемый узел
     pub fn get_biggest_unused_tile(&self) -> Option<&TileNode> {
         let unused_tiles = self.get_unused_tile_nodes();
-        unused_tiles.iter()
+        unused_tiles
+            .iter()
             .max_by_key(|tile| tile.get_area())
             .copied()
     }
@@ -173,10 +212,10 @@ impl Mosaic {
         }
 
         // Проверяем, помещается ли деталь в узел
-        let fits_normal = node.get_width() >= tile_dimensions.width 
+        let fits_normal = node.get_width() >= tile_dimensions.width
             && node.get_height() >= tile_dimensions.height;
-        let fits_rotated = !tile_dimensions.is_square() 
-            && node.get_width() >= tile_dimensions.height 
+        let fits_rotated = !tile_dimensions.is_square()
+            && node.get_width() >= tile_dimensions.height
             && node.get_height() >= tile_dimensions.width;
 
         if fits_normal || fits_rotated {
@@ -192,7 +231,7 @@ impl Mosaic {
         consider_grain_direction: bool,
     ) -> Result<Vec<Mosaic>, CuttingError> {
         let candidates = self.find_candidates(tile_dimensions);
-        
+
         if candidates.is_empty() {
             return Ok(Vec::new()); // Деталь не помещается
         }
@@ -224,13 +263,13 @@ impl Mosaic {
         rotated: bool,
     ) -> Result<Mosaic, CuttingError> {
         let mut new_mosaic = self.clone();
-        
+
         // Сохраняем координаты для поиска
         let x1 = target_node.get_x1();
         let x2 = target_node.get_x2();
         let y1 = target_node.get_y1();
         let y2 = target_node.get_y2();
-        
+
         // Размещаем деталь используя координаты
         Self::place_tile_at_coordinates(&mut new_mosaic, x1, x2, y1, y2, tile_dimensions, rotated)?;
 
@@ -248,17 +287,25 @@ impl Mosaic {
         rotated: bool,
     ) -> Result<(), CuttingError> {
         // Сначала находим узел, затем размещаем деталь
-        let node_found = Self::find_node_mut_by_coordinates_static(&mut mosaic.root_tile_node, x1, x2, y1, y2).is_some();
-        
+        let node_found =
+            Self::find_node_mut_by_coordinates_static(&mut mosaic.root_tile_node, x1, x2, y1, y2)
+                .is_some();
+
         if !node_found {
-            return Err(CuttingError::GeneralCuttingError("Target node not found".to_string()));
+            return Err(CuttingError::GeneralCuttingError(
+                "Target node not found".to_string(),
+            ));
         }
 
         // Теперь снова находим узел для размещения
-        if let Some(target_node) = Self::find_node_mut_by_coordinates_static(&mut mosaic.root_tile_node, x1, x2, y1, y2) {
+        if let Some(target_node) =
+            Self::find_node_mut_by_coordinates_static(&mut mosaic.root_tile_node, x1, x2, y1, y2)
+        {
             Self::place_tile_in_node_direct(target_node, tile_dimensions, rotated, &mut mosaic.cuts)
         } else {
-            Err(CuttingError::GeneralCuttingError("Target node not found".to_string()))
+            Err(CuttingError::GeneralCuttingError(
+                "Target node not found".to_string(),
+            ))
         }
     }
 
@@ -289,7 +336,14 @@ impl Mosaic {
 
         if width_diff > 0 && height_diff > 0 {
             // Нужны оба разреза - используем алгоритм splitHV
-            Self::split_hv_direct(node, tile_dimensions, tile_width, tile_height, rotated, cuts)
+            Self::split_hv_direct(
+                node,
+                tile_dimensions,
+                tile_width,
+                tile_height,
+                rotated,
+                cuts,
+            )
         } else if width_diff > 0 {
             // Только вертикальный разрез
             Self::split_vertical_only_direct(node, tile_dimensions, tile_width, rotated, cuts)
@@ -297,7 +351,9 @@ impl Mosaic {
             // Только горизонтальный разрез
             Self::split_horizontal_only_direct(node, tile_dimensions, tile_height, rotated, cuts)
         } else {
-            Err(CuttingError::GeneralCuttingError("Invalid placement scenario".to_string()))
+            Err(CuttingError::GeneralCuttingError(
+                "Invalid placement scenario".to_string(),
+            ))
         }
     }
 
@@ -312,8 +368,8 @@ impl Mosaic {
     ) -> Result<(), CuttingError> {
         // Сначала вертикальный разрез по ширине детали
         let cut_x = node.get_x1() + tile_width;
-        let cut_result = CuttingEngine::split_vertically(node, cut_x)?;
-        
+        let cut_result = CuttingEngine::split_vertically(node, cut_x, 3)?;
+
         cuts.push(cut_result.cut);
         node.child1 = Some(Box::new(cut_result.left_node));
         node.child2 = Some(Box::new(cut_result.right_node));
@@ -321,8 +377,8 @@ impl Mosaic {
         // Теперь горизонтальный разрез в левом дочернем узле
         if let Some(ref mut left_child) = node.child1 {
             let cut_y = left_child.get_y1() + tile_height;
-            let cut_result2 = CuttingEngine::split_horizontally(left_child, cut_y)?;
-            
+            let cut_result2 = CuttingEngine::split_horizontally(left_child, cut_y, 3)?;
+
             cuts.push(cut_result2.cut);
             left_child.child1 = Some(Box::new(cut_result2.left_node));
             left_child.child2 = Some(Box::new(cut_result2.right_node));
@@ -347,8 +403,8 @@ impl Mosaic {
         cuts: &mut Vec<Cut>,
     ) -> Result<(), CuttingError> {
         let cut_x = node.get_x1() + tile_width;
-        let cut_result = CuttingEngine::split_vertically(node, cut_x)?;
-        
+        let cut_result = CuttingEngine::split_vertically(node, cut_x, 3)?;
+
         cuts.push(cut_result.cut);
         node.child1 = Some(Box::new(cut_result.left_node));
         node.child2 = Some(Box::new(cut_result.right_node));
@@ -372,8 +428,8 @@ impl Mosaic {
         cuts: &mut Vec<Cut>,
     ) -> Result<(), CuttingError> {
         let cut_y = node.get_y1() + tile_height;
-        let cut_result = CuttingEngine::split_horizontally(node, cut_y)?;
-        
+        let cut_result = CuttingEngine::split_horizontally(node, cut_y, 3)?;
+
         cuts.push(cut_result.cut);
         node.child1 = Some(Box::new(cut_result.left_node));
         node.child2 = Some(Box::new(cut_result.right_node));
@@ -396,7 +452,8 @@ impl Mosaic {
         y1: i32,
         y2: i32,
     ) -> Option<&mut TileNode> {
-        if node.get_x1() == x1 && node.get_x2() == x2 && node.get_y1() == y1 && node.get_y2() == y2 {
+        if node.get_x1() == x1 && node.get_x2() == x2 && node.get_y1() == y1 && node.get_y2() == y2
+        {
             return Some(node);
         }
 
@@ -412,8 +469,6 @@ impl Mosaic {
 
         None
     }
-
-
 
     /// Проверить, есть ли свободные узлы
     pub fn has_unused_nodes(&self) -> bool {
@@ -488,7 +543,7 @@ impl Mosaic {
     /// Получить используемую площадь (неизменяемая версия)
     pub fn get_used_area_immutable(&self) -> i64 {
         let mut mosaic_clone = self.clone();
-        mosaic_clone.get_used_area()
+        mosaic_clone.get_used_area() as i64
     }
 
     /// Получить неиспользуемую площадь (неизменяемая версия)
@@ -500,7 +555,9 @@ impl Mosaic {
 
 impl std::fmt::Display for Mosaic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Mosaic[{}x{}, material={}, cuts={}, used_area={}]",
+        write!(
+            f,
+            "Mosaic[{}x{}, material={}, cuts={}, used_area={}]",
             self.root_tile_node.get_width(),
             self.root_tile_node.get_height(),
             self.material,

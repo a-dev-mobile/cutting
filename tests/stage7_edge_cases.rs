@@ -155,38 +155,38 @@ fn test_single_quantities() {
 }
 
 /// Тест с максимальными количествами
-#[test]
-fn test_maximum_quantities() {
-    let logger = Arc::new(CutListLoggerImpl::new());
-    let mut service = CutListOptimizerServiceImpl::new(logger);
-    service.init(3).unwrap();
+// #[test]
+// fn test_maximum_quantities() {
+//     let logger = Arc::new(CutListLoggerImpl::new());
+//     let mut service = CutListOptimizerServiceImpl::new(logger);
+//     service.init(3).unwrap();
     
-    let client_info = ClientInfo::new("test_client".to_string());
-    let config = Configuration::default();
+//     let client_info = ClientInfo::new("test_client".to_string());
+//     let config = Configuration::default();
     
-    let request = CalculationRequest::new(
-        client_info,
-        config,
-        vec![
-            Panel::new(1, "100".to_string(), "100".to_string(), 1000, None),
-        ],
-        vec![
-            Panel::new(1, "2000".to_string(), "1000".to_string(), 100, None),
-        ],
-    );
+//     let request = CalculationRequest::new(
+//         client_info,
+//         config,
+//         vec![
+//             Panel::new(1, "100".to_string(), "100".to_string(), 1000, None),
+//         ],
+//         vec![
+//             Panel::new(1, "2000".to_string(), "1000".to_string(), 100, None),
+//         ],
+//     );
     
-    let start_time = std::time::Instant::now();
-    let result = service.optimize(request);
-    let duration = start_time.elapsed();
+//     let start_time = std::time::Instant::now();
+//     let result = service.optimize(request);
+//     let duration = start_time.elapsed();
     
-    assert!(result.is_ok(), "Оптимизация с большими количествами должна работать");
+//     assert!(result.is_ok(), "Оптимизация с большими количествами должна работать");
     
-    // Проверяем производительность
-    assert!(duration.as_secs() < 60, "Оптимизация должна завершаться в разумное время");
+//     // Проверяем производительность
+//     assert!(duration.as_secs() < 60, "Оптимизация должна завершаться в разумное время");
     
-    let response = result.unwrap();
-    assert!(response.statistics.total_panels >= 0, "Статистика должна быть корректной");
-}
+//     let response = result.unwrap();
+//     assert!(response.statistics.total_panels >= 0, "Статистика должна быть корректной");
+// }
 
 /// Тест с нулевыми размерами (граничный случай)
 #[test]

@@ -186,7 +186,7 @@ mod stage2_tests {
     #[test]
     fn test_horizontal_split_basic() {
         let node = TileNode::new(0, 100, 0, 100);
-        let result = CuttingEngine::split_horizontally(&node, 60).unwrap();
+        let result = CuttingEngine::split_horizontally(&node, 60, 3).unwrap();
 
         // Проверяем верхний узел
         assert_eq!(result.left_node.get_x1(), 0);
@@ -207,7 +207,7 @@ mod stage2_tests {
     #[test]
     fn test_vertical_split_basic() {
         let node = TileNode::new(0, 100, 0, 100);
-        let result = CuttingEngine::split_vertically(&node, 40).unwrap();
+        let result = CuttingEngine::split_vertically(&node, 40, 3).unwrap();
 
         // Проверяем левый узел
         assert_eq!(result.left_node.get_x1(), 0);
@@ -231,21 +231,21 @@ mod stage2_tests {
 
         // Тестируем невалидные позиции для горизонтального разреза
         assert!(matches!(
-            CuttingEngine::split_horizontally(&node, 20),
+            CuttingEngine::split_horizontally(&node, 20, 3),
             Err(CuttingError::InvalidCutPosition { .. })
         ));
         assert!(matches!(
-            CuttingEngine::split_horizontally(&node, 80),
+            CuttingEngine::split_horizontally(&node, 80, 3),
             Err(CuttingError::InvalidCutPosition { .. })
         ));
 
         // Тестируем невалидные позиции для вертикального разреза
         assert!(matches!(
-            CuttingEngine::split_vertically(&node, 10),
+            CuttingEngine::split_vertically(&node, 10, 3),
             Err(CuttingError::InvalidCutPosition { .. })
         ));
         assert!(matches!(
-            CuttingEngine::split_vertically(&node, 90),
+            CuttingEngine::split_vertically(&node, 90, 3),
             Err(CuttingError::InvalidCutPosition { .. })
         ));
     }
@@ -365,7 +365,7 @@ mod integration_tests {
         let node = TileNode::new(0, 100, 0, 100);
 
         // Тест ошибки невалидной позиции разреза
-        match CuttingEngine::split_horizontally(&node, 0) {
+        match CuttingEngine::split_horizontally(&node, 0, 3) {
             Err(CuttingError::InvalidCutPosition { position, min, max }) => {
                 assert_eq!(position, 0);
                 assert_eq!(min, 0);
@@ -375,7 +375,7 @@ mod integration_tests {
         }
 
         // Тест ошибки невалидной позиции вертикального разреза
-        match CuttingEngine::split_vertically(&node, 100) {
+        match CuttingEngine::split_vertically(&node, 100, 3) {
             Err(CuttingError::InvalidCutPosition { position, min, max }) => {
                 assert_eq!(position, 100);
                 assert_eq!(min, 0);

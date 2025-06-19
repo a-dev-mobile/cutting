@@ -44,6 +44,71 @@ impl Solution {
         }
     }
 
+
+
+  /// Создает новое решение из складского решения (совместимость с новой версией)
+    pub fn from_stock_solution(stock_solution: &StockSolution) -> Self {
+        let mut solution = Self::new();
+        
+        // Добавляем первую панель как мозаику
+        if let Some(first_tile) = stock_solution.get_stock_tile_dimensions().first() {
+            let mosaic = Mosaic::new(first_tile);
+            solution.add_mosaic(mosaic);
+        }
+        
+        // Остальные панели добавляем в неиспользованные
+        for (index, tile) in stock_solution.get_stock_tile_dimensions().iter().enumerate() {
+            if index > 0 {
+                solution.unused_stock_panels.push_back(tile.clone());
+            }
+        }
+        
+        solution
+    }
+
+    /// Получает решения из результата оптимизации (метод для интеграции)
+    pub fn solutions(&self) -> Vec<Solution> {
+        vec![self.clone()]
+    }
+
+    /// Заменяет мозаику по индексу
+    pub fn replace_mosaic(&mut self, index: usize, new_mosaic: Mosaic) {
+        if index < self.mosaics.len() {
+            self.mosaics[index] = new_mosaic;
+            self.sort_mosaics();
+        }
+    }
+
+    /// Добавляет неразмещенную плитку
+    pub fn add_unplaced_tile(&mut self, tile: TileDimensions) {
+        self.no_fit_panels.push(tile);
+    }
+
+    /// Удаляет складскую панель из неиспользованных
+    pub fn remove_unused_stock(&mut self, stock_tile: &TileDimensions) {
+        self.unused_stock_panels.retain(|tile| tile.id != stock_tile.id);
+    }
+
+    /// Получает количество размещенных плиток
+    pub fn get_placed_tiles_count(&self) -> usize {
+        self.get_nbr_final_tiles() as usize
+    }
+
+    /// Вычисляет эффективность использования материала
+    pub fn get_efficiency(&self) -> f64 {
+        let total_area = self.get_total_area() as f64;
+        let used_area = self.get_used_area() as f64;
+            
+        if total_area > 0.0 {
+            (used_area / total_area) * 100.0
+        } else {
+            0.0
+        }
+    }
+
+
+
+
     /// Создать решение из одной панели
     pub fn from_tile_dimensions(tile_dimensions: TileDimensions) -> Self {
         let mut solution = Self::new();
@@ -51,22 +116,6 @@ impl Solution {
         solution
     }
 
-    /// Создать решение из стокового решения
-    pub fn from_stock_solution(stock_solution: &StockSolution) -> Self {
-        let mut solution = Self::new();
-        
-        // Добавляем все стоковые панели в очередь неиспользованных
-        for tile in stock_solution.get_stock_tile_dimensions() {
-            solution.unused_stock_panels.push_back(tile.clone());
-        }
-        
-        // Берем первую панель и создаем из неё мозаику
-        if let Some(first_tile) = solution.unused_stock_panels.pop_front() {
-            solution.add_mosaic(Mosaic::new(&first_tile));
-        }
-        
-        solution
-    }
 
     /// Копирующий конструктор
     pub fn copy(other: &Solution) -> Self {
@@ -471,6 +520,8 @@ impl Solution {
                 new_solutions.push(new_solution);
             }
         }
+
+        
 
         Ok(new_solutions)
     }

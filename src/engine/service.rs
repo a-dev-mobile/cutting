@@ -1,6 +1,8 @@
 use crate::engine::model::request::CalculationRequest;
-use crate::engine::model::response::{TaskStatusResponse, Stats, StatusCode, CalculationSubmissionResult};
+use crate::engine::model::response::{CalculationResponse, TaskStatusResponse, Stats, StatusCode, CalculationSubmissionResult};
 use crate::engine::model::solution::Solution;
+use crate::engine::model::tile::TileDimensions;
+use crate::engine::stock::StockSolution;
 use crate::engine::logger::CutListLogger;
 use crate::engine::tasks::{RunningTasks, Task, TaskPriority};
 use crate::engine::watchdog::{WatchDog, WatchDogConfig, ConsoleEventHandler};
@@ -20,8 +22,7 @@ pub const MAX_PERMUTATIONS_WITH_SOLUTION: usize = 150;
 pub const MAX_ALLOWED_DIGITS: usize = 6;
 pub const THREAD_QUEUE_SIZE: usize = 1000;
 
-
-/// Статус задачи для сервиса (отличается от ProgressTaskStatus)
+/// Статус задачи для сервиса
 #[derive(Debug, Clone, PartialEq)]
 pub enum ServiceTaskStatus {
     Idle,
@@ -64,7 +65,7 @@ pub trait CutListOptimizerService {
     fn init(&mut self, threads: usize) -> Result<(), CuttingError>;
     
     /// Синхронная оптимизация
-    fn optimize(&mut self, request: CalculationRequest) -> Result<crate::engine::model::response::CalculationResponse, CuttingError>;
+    fn optimize(&mut self, request: CalculationRequest) -> Result<CalculationResponse, CuttingError>;
     
     /// Отправка задачи на расчет
     fn submit_task(&mut self, request: CalculationRequest) -> Result<CalculationSubmissionResult, CuttingError>;
@@ -89,6 +90,30 @@ pub trait CutListOptimizerService {
     
     /// Установка логгера
     fn set_cut_list_logger(&mut self, logger: Arc<dyn CutListLogger>);
+}
+
+/// Результат оптимизации
+#[derive(Debug, Clone)]
+pub struct OptimizationResult {
+    pub solutions: Vec<Solution>,
+    pub placed_panels_count: usize,
+    pub total_area: f64,
+    pub used_area: f64,
+    pub efficiency: f64,
+    pub cuts_count: usize,
+}
+
+impl OptimizationResult {
+    pub fn new() -> Self {
+        Self {
+            solutions: Vec::new(),
+            placed_panels_count: 0,
+            total_area: 0.0,
+            used_area: 0.0,
+            efficiency: 0.0,
+            cuts_count: 0,
+        }
+    }
 }
 
 /// Реализация сервиса оптимизатора раскроя
@@ -208,45 +233,372 @@ impl CutListOptimizerServiceImpl {
         }
     }
 
-    /// Вычисляет задачу оптимизации
-    #[allow(dead_code)]
-    fn compute(&self, request: CalculationRequest, task_id: String) {
-        let client_id = request.client_info.id.clone();
-        let logger = Arc::clone(&self.cut_list_logger);
-        let running_tasks = Arc::clone(&self.running_tasks);
-        let _client_tasks = Arc::clone(&self.client_tasks);
+    /// Выполняет основную логику оптимизации используя правильную интеграцию с Solution и Mosaic
+    fn perform_optimization(&self, request: &CalculationRequest) -> Result<OptimizationResult, CuttingError> {
+        self.cut_list_logger.info("Начинаем основную оптимизацию с правильной интеграцией");
         
-        // Клонируем переменные для использования в замыкании
-        let task_id_for_closure = task_id.clone();
-        let logger_for_closure = Arc::clone(&logger);
-        
-        // Создаем задачу для выполнения
-        let task = Task::new(
-            task_id.clone(),
-            "Оптимизация раскроя".to_string(),
-            TaskPriority::Normal,
-            move || {
-                logger_for_closure.info(&format!("Начало выполнения задачи {}", task_id_for_closure));
-                
-                // Здесь будет основная логика оптимизации
-                // Пока что возвращаем пустой результат
-                let solutions = vec![Solution::new()];
-                
-                logger_for_closure.info(&format!("Задача {} завершена успешно", task_id_for_closure));
-                Ok(solutions)
-            },
-        );
-
-        // Добавляем задачу в менеджер
-        if let Err(e) = running_tasks.submit_task(task) {
-            logger.error(&format!("Ошибка при добавлении задачи {}: {}", task_id, e));
-            self.remove_task_from_client(&client_id, &task_id);
+        // Конвертируем панели из запроса в TileDimensions
+        let mut tile_dimensions_list = Vec::new();
+        for panel in &request.panels {
+            for _ in 0..panel.count {
+                if let (Ok(width), Ok(height)) = (panel.width.parse::<i32>(), panel.height.parse::<i32>()) {
+                    let tile_dimensions = TileDimensions::new(
+                        panel.id,
+                        width,
+                        height,
+                        panel.material.clone(),
+                        0,
+                        panel.label.clone(),
+                    );
+                    tile_dimensions_list.push(tile_dimensions);
+                }
+            }
         }
+        
+        // Конвертируем складские панели
+        let mut stock_tile_dimensions = Vec::new();
+        for stock_panel in &request.stock_panels {
+            for _ in 0..stock_panel.count {
+                if let (Ok(width), Ok(height)) = (stock_panel.width.parse::<i32>(), stock_panel.height.parse::<i32>()) {
+                    let tile_dimensions = TileDimensions::new(
+                        stock_panel.id,
+                        width,
+                        height,
+                        stock_panel.material.clone(),
+                        0,
+                        stock_panel.label.clone(),
+                    );
+                    stock_tile_dimensions.push(tile_dimensions);
+                }
+            }
+        }
+        
+        self.cut_list_logger.info(&format!(
+            "Подготовлено {} панелей и {} складских панелей для оптимизации",
+            tile_dimensions_list.len(),
+            stock_tile_dimensions.len()
+        ));
+        
+        // Сортируем панели по убыванию площади (как в Java версии)
+        tile_dimensions_list.sort_by(|a, b| {
+            let area_a = a.get_area();
+            let area_b = b.get_area();
+            area_b.cmp(&area_a)
+        });
+        
+        // Выполняем оптимизацию используя правильный алгоритм по образцу Java
+        let optimization_result = self.compute_optimal_solution(&tile_dimensions_list, &stock_tile_dimensions)?;
+        
+        self.cut_list_logger.info(&format!(
+            "Оптимизация завершена: размещено {}/{} панелей, эффективность {:.2}%, разрезов: {}",
+            optimization_result.placed_panels_count,
+            tile_dimensions_list.len(),
+            optimization_result.efficiency,
+            optimization_result.cuts_count
+        ));
+        
+        Ok(optimization_result)
+    }
+
+    /// Основной алгоритм оптимизации по образцу Java CutListThread.computeSolutions
+    fn compute_optimal_solution(
+        &self,
+        tiles: &[TileDimensions],
+        stock_tiles: &[TileDimensions],
+    ) -> Result<OptimizationResult, CuttingError> {
+        self.cut_list_logger.info("Запуск алгоритма оптимизации по образцу Java CutListThread");
+        
+        // Создаем стоковые решения (комбинации складских панелей)
+        let stock_solutions = self.generate_stock_solutions(stock_tiles, tiles);
+        
+        let mut best_solutions = Vec::new();
+        let mut total_placed_panels = 0;
+        let mut total_area = 0.0;
+        let mut used_area = 0.0;
+        let mut cuts_count = 0;
+        let mut best_efficiency = 0.0;
+        
+        // Перебираем стоковые решения
+        for (stock_idx, stock_solution) in stock_solutions.iter().enumerate().take(MAX_STOCK_ITERATIONS) {
+            self.cut_list_logger.info(&format!(
+                "Пробуем стоковое решение {}: {} панелей, площадь: {}",
+                stock_idx + 1,
+                stock_solution.get_stock_tile_dimensions().len(),
+                stock_solution.get_total_area()
+            ));
+            
+            // Генерируем перестановки панелей для размещения
+            let permutations = self.generate_tile_permutations(tiles);
+            
+            // Перебираем перестановки
+            for (perm_idx, permutation) in permutations.iter().enumerate().take(MAX_PERMUTATION_ITERATIONS.min(20)) {
+                if perm_idx % 5 == 0 {
+                    self.cut_list_logger.info(&format!("Обрабатываем перестановку {}", perm_idx + 1));
+                }
+                
+                // Выполняем размещение используя алгоритм как в Java CutListThread.computeSolutions
+                match self.compute_solutions_for_permutation(&permutation, stock_solution) {
+                    Ok(solutions) => {
+                        if !solutions.is_empty() {
+                            let best_solution = &solutions[0]; // Берем лучшее решение
+                            
+                            let solution_placed = best_solution.get_nbr_final_tiles() as usize;
+                            let solution_total_area = best_solution.get_total_area() as f64;
+                            let solution_used_area = best_solution.get_used_area() as f64;
+                            let solution_efficiency = if solution_total_area > 0.0 {
+                                (solution_used_area / solution_total_area) * 100.0
+                            } else {
+                                0.0
+                            };
+                            let solution_cuts = best_solution.get_cuts_count();
+                            
+                            self.cut_list_logger.info(&format!(
+                                "Перестановка {}: размещено {}/{} панелей, эффективность {:.2}%",
+                                perm_idx + 1,
+                                solution_placed,
+                                tiles.len(),
+                                solution_efficiency
+                            ));
+                            
+                            // Проверяем, лучше ли это решение
+                            if solution_placed > total_placed_panels || 
+                               (solution_placed == total_placed_panels && solution_efficiency > best_efficiency) {
+                                
+                                self.cut_list_logger.info(&format!(
+                                    "Новое лучшее решение: размещено {}/{} панелей, эффективность {:.2}%",
+                                    solution_placed,
+                                    tiles.len(),
+                                    solution_efficiency
+                                ));
+                                
+                                best_solutions = solutions;
+                                total_placed_panels = solution_placed;
+                                total_area = solution_total_area;
+                                used_area = solution_used_area;
+                                cuts_count = solution_cuts as usize;
+                                best_efficiency = solution_efficiency;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        self.cut_list_logger.warning(&format!(
+                            "Ошибка при обработке перестановки {}: {}",
+                            perm_idx + 1, e
+                        ));
+                    }
+                }
+                
+                // Если достигли отличного размещения, прекращаем поиск
+                if total_placed_panels == tiles.len() && best_efficiency > 95.0 {
+                    self.cut_list_logger.info("Достигнуто отличное размещение, прекращаем поиск");
+                    break;
+                }
+            }
+            
+            // Если все панели размещены с хорошей эффективностью, прекращаем
+            if total_placed_panels == tiles.len() && best_efficiency > 80.0 {
+                self.cut_list_logger.info("Все панели размещены с хорошей эффективностью, завершаем оптимизацию");
+                break;
+            }
+        }
+        
+        let efficiency = if total_area > 0.0 {
+            (used_area / total_area) * 100.0
+        } else {
+            0.0
+        };
+        
+        Ok(OptimizationResult {
+            solutions: best_solutions,
+            placed_panels_count: total_placed_panels,
+            total_area,
+            used_area,
+            efficiency,
+            cuts_count,
+        })
+    }
+
+    /// Генерирует стоковые решения (комбинации складских панелей)
+    fn generate_stock_solutions(&self, stock_tiles: &[TileDimensions], tiles: &[TileDimensions]) -> Vec<StockSolution> {
+        let mut solutions = Vec::new();
+        
+        // Вычисляем общую площадь панелей для размещения
+        let total_tiles_area: i64 = tiles.iter().map(|t| t.get_area()).sum();
+        
+        // Добавляем одиночные складские панели
+        for stock_tile in stock_tiles {
+            if stock_tile.get_area() >= total_tiles_area / 4 { // Только если панель достаточно большая
+                solutions.push(StockSolution::new(vec![stock_tile.clone()]));
+            }
+        }
+        
+        // Добавляем комбинации из нескольких панелей (до 3 для производительности)
+        if stock_tiles.len() > 1 {
+            for i in 0..stock_tiles.len() {
+                for j in (i+1)..stock_tiles.len().min(i+4) {
+                    let combo = vec![stock_tiles[i].clone(), stock_tiles[j].clone()];
+                    let combo_area: i64 = combo.iter().map(|t| t.get_area()).sum();
+                    
+                    // Добавляем только если комбинация может вместить хотя бы 30% панелей
+                    if combo_area >= total_tiles_area / 3 {
+                        solutions.push(StockSolution::new(combo));
+                    }
+                }
+            }
+        }
+        
+        // Сортируем решения по площади (сначала меньшие для экономии материала)
+        solutions.sort_by(|a, b| a.get_total_area().cmp(&b.get_total_area()));
+        
+        // Ограничиваем количество для производительности
+        solutions.truncate(50);
+        
+        solutions
+    }
+
+    /// Генерирует перестановки панелей (различные стратегии сортировки)
+    fn generate_tile_permutations(&self, tiles: &[TileDimensions]) -> Vec<Vec<TileDimensions>> {
+        let mut permutations = Vec::new();
+        
+        // 1. Исходный порядок (по убыванию площади)
+        permutations.push(tiles.to_vec());
+        
+        // 2. Сортировка по ширине (убывание)
+        let mut by_width = tiles.to_vec();
+        by_width.sort_by(|a, b| b.width.cmp(&a.width));
+        permutations.push(by_width);
+        
+        // 3. Сортировка по высоте (убывание)
+        let mut by_height = tiles.to_vec();
+        by_height.sort_by(|a, b| b.height.cmp(&a.height));
+        permutations.push(by_height);
+        
+        // 4. Сортировка по максимальному измерению
+        let mut by_max_dim = tiles.to_vec();
+        by_max_dim.sort_by(|a, b| b.get_max_dimension().cmp(&a.get_max_dimension()));
+        permutations.push(by_max_dim);
+        
+        // 5. Сортировка по периметру
+        let mut by_perimeter = tiles.to_vec();
+        by_perimeter.sort_by(|a, b| {
+            let perimeter_a = 2 * (a.width + a.height);
+            let perimeter_b = 2 * (b.width + b.height);
+            perimeter_b.cmp(&perimeter_a)
+        });
+        permutations.push(by_perimeter);
+        
+        // 6. Обратный порядок
+        let mut reversed = tiles.to_vec();
+        reversed.reverse();
+        permutations.push(reversed);
+        
+        permutations
+    }
+
+    /// Выполняет размещение для конкретной перестановки (аналог Java CutListThread.computeSolutions)
+    fn compute_solutions_for_permutation(
+        &self,
+        tiles: &[TileDimensions],
+        stock_solution: &StockSolution,
+    ) -> Result<Vec<Solution>, CuttingError> {
+        // Создаем начальное решение из стокового решения
+        let mut solutions = vec![Solution::from_stock_solution(stock_solution)];
+        
+        // Последовательно размещаем каждую панель (как в Java CutListThread.computeSolutions)
+        for (tile_index, tile) in tiles.iter().enumerate() {
+            let mut new_solutions = Vec::new();
+            
+            // Для каждого текущего решения пытаемся разместить панель
+            for solution in &mut solutions {
+                match solution.try_place_tile(tile) {
+                    Ok(placement_results) => {
+                        // Добавляем все успешные размещения
+                        new_solutions.extend(placement_results);
+                    }
+                    Err(e) => {
+                        self.cut_list_logger.warning(&format!(
+                            "Ошибка размещения панели {} в решении: {}",
+                            tile_index + 1, e
+                        ));
+                        
+                        // Добавляем исходное решение с панелью в списке неразмещенных
+                        let mut failed_solution = Solution::copy(solution);
+                        failed_solution.get_no_fit_panels_mut().push(tile.clone());
+                        new_solutions.push(failed_solution);
+                    }
+                }
+            }
+            
+            solutions = new_solutions;
+            
+            // Удаляем дубликаты и сортируем решения
+            self.remove_duplicate_solutions(&mut solutions);
+            self.sort_solutions_by_quality(&mut solutions);
+            
+            // Ограничиваем количество решений для производительности
+            if solutions.len() > 100 {
+                solutions.truncate(100);
+            }
+            
+            // Логируем прогресс
+            if tile_index % 10 == 0 && tile_index > 0 {
+                self.cut_list_logger.info(&format!(
+                    "Обработано {} из {} панелей, текущее количество решений: {}",
+                    tile_index + 1, tiles.len(), solutions.len()
+                ));
+            }
+        }
+        
+        Ok(solutions)
+    }
+
+    /// Удаляет дубликаты решений (аналог Java removeDuplicated)
+    fn remove_duplicate_solutions(&self, solutions: &mut Vec<Solution>) {
+        let mut seen_signatures = std::collections::HashSet::new();
+        
+        solutions.retain(|solution| {
+            let signature = solution.get_structure_identifier();
+            seen_signatures.insert(signature)
+        });
+    }
+
+    /// Сортирует решения по качеству (аналог Java sort)
+    fn sort_solutions_by_quality(&self, solutions: &mut Vec<Solution>) {
+        solutions.sort_by(|a, b| {
+            // Сначала по количеству размещенных панелей (больше лучше)
+            let placed_a = a.get_nbr_final_tiles();
+            let placed_b = b.get_nbr_final_tiles();
+            
+            match placed_b.cmp(&placed_a) {
+                std::cmp::Ordering::Equal => {
+                    // Затем по эффективности использования площади (больше лучше)
+                    let efficiency_a = if a.get_total_area() > 0 {
+                        (a.get_used_area() as f64 / a.get_total_area() as f64) * 100.0
+                    } else {
+                        0.0
+                    };
+                    let efficiency_b = if b.get_total_area() > 0 {
+                        (b.get_used_area() as f64 / b.get_total_area() as f64) * 100.0
+                    } else {
+                        0.0
+                    };
+                    
+                    match efficiency_b.partial_cmp(&efficiency_a).unwrap_or(std::cmp::Ordering::Equal) {
+                        std::cmp::Ordering::Equal => {
+                            // Если эффективность одинаковая, сортируем по общей площади (больше лучше)
+                            b.get_total_area().cmp(&a.get_total_area())
+                        }
+                        other => other,
+                    }
+                }
+                other => other,
+            }
+        });
     }
 }
 
 impl CutListOptimizerService for CutListOptimizerServiceImpl {
-    fn optimize(&mut self, request: CalculationRequest) -> Result<crate::engine::model::response::CalculationResponse, CuttingError> {
+    fn optimize(&mut self, request: CalculationRequest) -> Result<CalculationResponse, CuttingError> {
         self.cut_list_logger.info("Начало синхронной оптимизации");
         
         // Валидируем панели
@@ -270,24 +622,38 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
             _panel_count, _stock_count
         ));
 
-        // Здесь будет основная логика оптимизации
-        // Пока что возвращаем базовый ответ
-        let mut response = crate::engine::model::response::CalculationResponse::new();
+        // Выполняем оптимизацию
+        let optimization_result = self.perform_optimization(&request)?;
         
-        // Обновляем статистику
+        // Создаем ответ с результатами оптимизации
+        let mut response = CalculationResponse::new();
+        
+        // Обновляем статистику с реальными данными
         response.statistics.update(
             request.panels.len(),
-            0, // пока что 0 размещенных панелей
-            0.0, // общая площадь
-            0.0  // использованная площадь
+            optimization_result.placed_panels_count,
+            optimization_result.total_area,
+            optimization_result.used_area
         );
+        
+        // TODO: Конвертируем решения в панели ответа
+        // Эта логика будет реализована отдельно
         
         // Добавляем метаданные
         response.add_metadata("optimization_type".to_string(), "synchronous".to_string());
         response.add_metadata("panel_count".to_string(), _panel_count.to_string());
         response.add_metadata("stock_count".to_string(), _stock_count.to_string());
+        response.add_metadata("placed_panels".to_string(), optimization_result.placed_panels_count.to_string());
+        response.add_metadata("efficiency".to_string(), format!("{:.2}%", optimization_result.efficiency));
+        response.add_metadata("cuts_count".to_string(), optimization_result.cuts_count.to_string());
         
-        self.cut_list_logger.info("Синхронная оптимизация завершена");
+        self.cut_list_logger.info(&format!(
+            "Синхронная оптимизация завершена: размещено {}/{} панелей, эффективность {:.2}%",
+            optimization_result.placed_panels_count,
+            request.panels.len(),
+            optimization_result.efficiency
+        ));
+        
         Ok(response)
     }
 
@@ -372,7 +738,8 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         // Добавляем задачу к клиенту
         self.add_task_to_client(client_id, &task_id);
         
-        // Запускаем вычисление напрямую, используя клонированные данные
+        // Запускаем вычисление в отдельном потоке
+        let request_clone = request.clone();
         let task_id_clone = task_id.clone();
         let client_id_clone = client_id.clone();
         let logger_clone = Arc::clone(&self.cut_list_logger);
@@ -380,111 +747,164 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         let client_tasks_clone = Arc::clone(&self.client_tasks);
         let task_info_clone = Arc::clone(&self.task_info);
         
-        thread::spawn(move || {
-            // Клонируем переменные для использования в замыкании задачи
-            let task_id_for_task = task_id_clone.clone();
-            let logger_for_task = Arc::clone(&logger_clone);
-            let task_info_for_task = Arc::clone(&task_info_clone);
-            
-            // Создаем задачу для выполнения
-            let task = Task::new(
-                task_id_clone.clone(),
-                "Оптимизация раскроя".to_string(),
-                TaskPriority::Normal,
-                move || {
-                    logger_for_task.info(&format!("Начало выполнения задачи {}", task_id_for_task));
-                    
-                    // Обновляем статус задачи
-                    if let Ok(mut task_info_map) = task_info_for_task.lock() {
-                        if let Some(info) = task_info_map.get_mut(&task_id_for_task) {
-                            info.status = ServiceTaskStatus::Running;
-                            info.progress_percentage = 50;
-                        }
-                    }
-                    
-                    // Имитируем работу
-                    thread::sleep(std::time::Duration::from_millis(100));
-                    
-                    // Здесь будет основная логика оптимизации
-                    // Пока что возвращаем пустой результат
-                    let solutions = vec![Solution::new()];
-                    
-                    // Обновляем статус задачи на завершенную
-                    if let Ok(mut task_info_map) = task_info_for_task.lock() {
-                        if let Some(info) = task_info_map.get_mut(&task_id_for_task) {
-                            info.status = ServiceTaskStatus::Completed;
-                            info.progress_percentage = 100;
-                            info.end_time = Some(Utc::now());
-                        }
-                    }
-                    
-                    logger_for_task.info(&format!("Задача {} завершена успешно", task_id_for_task));
-                    Ok(solutions)
-                },
-            );
-
-            // Добавляем задачу в менеджер
-            if let Err(e) = running_tasks_clone.submit_task(task) {
-                logger_clone.error(&format!("Ошибка при добавлении задачи {}: {}", task_id_clone, e));
-                // Удаляем задачу у клиента при ошибке
-                if let Ok(mut client_tasks) = client_tasks_clone.lock() {
-                    if let Some(tasks) = client_tasks.get_mut(&client_id_clone) {
-                        tasks.retain(|id| id != &task_id_clone);
-                        if tasks.is_empty() {
-                            client_tasks.remove(&client_id_clone);
-                        }
+        // Создаем задачу для выполнения
+        let task = Task::new(
+            task_id_clone.clone(),
+            "Оптимизация раскроя".to_string(),
+            TaskPriority::Normal,
+            move || {
+                logger_clone.info(&format!("Начало выполнения задачи {}", task_id_clone));
+                
+                // Обновляем статус задачи
+                if let Ok(mut task_info_map) = task_info_clone.lock() {
+                    if let Some(info) = task_info_map.get_mut(&task_id_clone) {
+                        info.status = ServiceTaskStatus::Running;
+                        info.progress_percentage = 10;
                     }
                 }
                 
-                // Обновляем статус задачи на ошибку
-                if let Ok(mut task_info_map) = task_info_clone.lock() {
-                    if let Some(info) = task_info_map.get_mut(&task_id_clone) {
-                        info.status = ServiceTaskStatus::Error;
-                        info.end_time = Some(Utc::now());
+                // Выполняем реальную оптимизацию
+                // Создаем временный сервис для выполнения оптимизации
+                let temp_service = CutListOptimizerServiceImpl::new(Arc::clone(&logger_clone));
+                let optimization_result = temp_service.perform_optimization(&request_clone);
+                
+                match optimization_result {
+                    Ok(result) => {
+                        // Создаем решения на основе результата
+                        let solutions = result.solutions;
+                        
+                        // Обновляем статус задачи на завершенную
+                        if let Ok(mut task_info_map) = task_info_clone.lock() {
+                            if let Some(info) = task_info_map.get_mut(&task_id_clone) {
+                                info.status = ServiceTaskStatus::Completed;
+                                info.progress_percentage = 100;
+                                info.end_time = Some(Utc::now());
+                                if !solutions.is_empty() {
+                                    info.solution = Some(solutions[0].clone());
+                                }
+                            }
+                        }
+                        
+                        logger_clone.info(&format!(
+                            "Задача {} завершена успешно: размещено {} панелей, эффективность {:.2}%",
+                            task_id_clone, result.placed_panels_count, result.efficiency
+                        ));
+                        
+                        Ok(solutions)
+                    }
+                    Err(e) => {
+                        // Обновляем статус задачи на ошибку
+                        if let Ok(mut task_info_map) = task_info_clone.lock() {
+                            if let Some(info) = task_info_map.get_mut(&task_id_clone) {
+                                info.status = ServiceTaskStatus::Error;
+                                info.end_time = Some(Utc::now());
+                            }
+                        }
+                        
+                        logger_clone.error(&format!("Ошибка выполнения задачи {}: {}", task_id_clone, e));
+                        Err(e)
+                    }
+                }
+            },
+        );
+
+        // Добавляем задачу в менеджер
+        let logger_for_error = Arc::clone(&self.cut_list_logger);
+        let task_info_for_error = Arc::clone(&self.task_info);
+        if let Err(e) = running_tasks_clone.submit_task(task) {
+            logger_for_error.error(&format!("Ошибка при добавлении задачи {}: {}", task_id, e));
+            // Удаляем задачу у клиента при ошибке
+            if let Ok(mut client_tasks) = client_tasks_clone.lock() {
+                if let Some(tasks) = client_tasks.get_mut(&client_id_clone) {
+                    tasks.retain(|id| id != &task_id);
+                    if tasks.is_empty() {
+                        client_tasks.remove(&client_id_clone);
                     }
                 }
             }
-        });
+            
+            // Обновляем статус задачи на ошибку
+            if let Ok(mut task_info_map) = task_info_for_error.lock() {
+                if let Some(info) = task_info_map.get_mut(&task_id) {
+                    info.status = ServiceTaskStatus::Error;
+                    info.end_time = Some(Utc::now());
+                }
+            }
+        }
 
         self.cut_list_logger.info(&format!("Задача {} отправлена на выполнение", task_id));
         
         Ok(CalculationSubmissionResult::success(task_id))
     }
 
-    fn get_task_status(&self, _task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError> {
-        // Здесь должна быть логика получения статуса задачи из running_tasks
-        // Пока что возвращаем заглушку
-        Ok(Some(TaskStatusResponse {
-            status: "RUNNING".to_string(),
-            init_percentage: 50,
-            percentage_done: 25,
-            details: Some("Выполняется оптимизация".to_string()),
-            solution: None,
-            last_updated: Utc::now().timestamp_millis() as u64,
-        }))
+    fn get_task_status(&self, task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError> {
+        if let Ok(task_info) = self.task_info.lock() {
+            if let Some(info) = task_info.get(task_id) {
+                let mut response = TaskStatusResponse::new(format!("{:?}", info.status));
+                response.update_progress(info.progress_percentage, info.progress_percentage);
+                response.details = Some(format!("Задача {}: {:?}", task_id, info.status));
+                
+                // Если есть решение, создаем ответ с решением
+                if let Some(ref solution) = info.solution {
+                    let mut calc_response = CalculationResponse::new();
+                    calc_response.statistics.update(
+                        solution.get_nbr_final_tiles() as usize,
+                        solution.get_nbr_final_tiles() as usize,
+                        solution.get_total_area() as f64,
+                        solution.get_used_area() as f64
+                    );
+                    response.set_solution(calc_response);
+                }
+                
+                return Ok(Some(response));
+            }
+        }
+
+        // Проверяем активные задачи в running_tasks
+        if self.running_tasks.get_active_task_count() > 0 {
+            let mut response = TaskStatusResponse::new("RUNNING".to_string());
+            response.update_progress(50, 25);
+            response.details = Some("Выполняется оптимизация".to_string());
+            return Ok(Some(response));
+        }
+
+        Ok(None)
     }
 
     fn stop_task(&mut self, task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError> {
         self.cut_list_logger.info(&format!("Остановка задачи {}", task_id));
         
-        // Здесь должна быть логика остановки задачи
-        // Пока что возвращаем заглушку
-        Ok(Some(TaskStatusResponse {
-            status: "STOPPED".to_string(),
-            init_percentage: 100,
-            percentage_done: 100,
-            details: Some("Задача остановлена".to_string()),
-            solution: None,
-            last_updated: Utc::now().timestamp_millis() as u64,
-        }))
+        // Обновляем статус в task_info
+        if let Ok(mut task_info) = self.task_info.lock() {
+            if let Some(info) = task_info.get_mut(task_id) {
+                info.status = ServiceTaskStatus::Stopped;
+                info.end_time = Some(Utc::now());
+                
+                let mut response = TaskStatusResponse::new("STOPPED".to_string());
+                response.update_progress(100, 100);
+                response.details = Some("Задача остановлена".to_string());
+                
+                return Ok(Some(response));
+            }
+        }
+
+        Ok(None)
     }
 
     fn terminate_task(&mut self, task_id: &str) -> Result<i32, CuttingError> {
         self.cut_list_logger.info(&format!("Принудительное завершение задачи {}", task_id));
         
-        // Здесь должна быть логика принудительного завершения задачи
-        // Возвращаем 0 при успехе, -1 при ошибке
-        Ok(0)
+        // Обновляем статус в task_info
+        if let Ok(mut task_info) = self.task_info.lock() {
+            if let Some(info) = task_info.get_mut(task_id) {
+                info.status = ServiceTaskStatus::Terminated;
+                info.end_time = Some(Utc::now());
+                return Ok(0);
+            }
+        }
+
+        // Если задача не найдена
+        Ok(-1)
     }
 
     fn get_tasks(&self, client_id: &str, status: Option<ServiceTaskStatus>) -> Result<Vec<ServiceTaskInfo>, CuttingError> {
@@ -637,5 +1057,89 @@ mod tests {
         );
         assert!(!error_result.is_success());
         assert_eq!(error_result.task_id, None);
+    }
+
+    #[test]
+    fn test_optimization_result_creation() {
+        let result = OptimizationResult::new();
+        assert_eq!(result.placed_panels_count, 0);
+        assert_eq!(result.efficiency, 0.0);
+        assert!(result.solutions.is_empty());
+    }
+
+    #[test]
+    fn test_generate_stock_solutions() {
+        let logger = Arc::new(CutListLoggerImpl::new());
+        let service = CutListOptimizerServiceImpl::new(logger);
+        
+        let stock_tiles = vec![
+            TileDimensions::simple(1000, 600),
+            TileDimensions::simple(800, 500),
+        ];
+        let tiles = vec![
+            TileDimensions::simple(200, 200),
+        ];
+        
+        let solutions = service.generate_stock_solutions(&stock_tiles, &tiles);
+        assert!(!solutions.is_empty());
+        // Проверяем, что решения отсортированы по площади
+        if solutions.len() > 1 {
+            assert!(solutions[0].get_total_area() <= solutions[1].get_total_area());
+        }
+    }
+
+    #[test]
+    fn test_generate_tile_permutations() {
+        let logger = Arc::new(CutListLoggerImpl::new());
+        let service = CutListOptimizerServiceImpl::new(logger);
+        
+        let tiles = vec![
+            TileDimensions::simple(100, 50),
+            TileDimensions::simple(200, 100),
+            TileDimensions::simple(150, 75),
+        ];
+        
+        let permutations = service.generate_tile_permutations(&tiles);
+        assert_eq!(permutations.len(), 6); // 6 различных стратегий сортировки
+        
+        // Проверяем, что исходный порядок сохранен в первой перестановке
+        assert_eq!(permutations[0], tiles);
+    }
+
+    #[test]
+    fn test_remove_duplicate_solutions() {
+        let logger = Arc::new(CutListLoggerImpl::new());
+        let service = CutListOptimizerServiceImpl::new(logger);
+        
+        let stock_solution = StockSolution::new(vec![TileDimensions::simple(1000, 600)]);
+        let solution1 = Solution::from_stock_solution(&stock_solution);
+        let solution2 = Solution::from_stock_solution(&stock_solution);
+        
+        let mut solutions = vec![solution1, solution2];
+        let original_count = solutions.len();
+        
+        service.remove_duplicate_solutions(&mut solutions);
+        
+        // После удаления дубликатов должно остаться меньше решений
+        assert!(solutions.len() <= original_count);
+    }
+
+    #[test]
+    fn test_sort_solutions_by_quality() {
+        let logger = Arc::new(CutListLoggerImpl::new());
+        let service = CutListOptimizerServiceImpl::new(logger);
+        
+        let stock_solution1 = StockSolution::new(vec![TileDimensions::simple(1000, 600)]);
+        let stock_solution2 = StockSolution::new(vec![TileDimensions::simple(500, 300)]);
+        
+        let solution1 = Solution::from_stock_solution(&stock_solution1);
+        let solution2 = Solution::from_stock_solution(&stock_solution2);
+        
+        let mut solutions = vec![solution2, solution1]; // Меньшее решение первое
+        
+        service.sort_solutions_by_quality(&mut solutions);
+        
+        // После сортировки большее решение должно быть первым
+        assert!(solutions[0].get_total_area() >= solutions[1].get_total_area());
     }
 }
