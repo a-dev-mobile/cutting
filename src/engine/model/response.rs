@@ -189,12 +189,22 @@ impl ResponseStatistics {
                   used_area: f64) {
         self.total_panels = total_panels;
         self.placed_panels = placed_panels;
-        self.unplaced_panels = total_panels - placed_panels;
-        self.total_area = total_area;
-        self.used_area = used_area;
-        self.wasted_area = total_area - used_area;
+        // Предотвращаем переполнение при вычитании
+        self.unplaced_panels = if placed_panels <= total_panels {
+            total_panels - placed_panels
+        } else {
+            0
+        };
+        self.total_area = total_area.max(0.0);
+        self.used_area = used_area.max(0.0);
+        // Предотвращаем отрицательные значения
+        self.wasted_area = if total_area >= used_area {
+            total_area - used_area
+        } else {
+            0.0
+        };
         self.efficiency_percentage = if total_area > 0.0 {
-            (used_area / total_area) * 100.0
+            ((used_area / total_area) * 100.0).min(100.0).max(0.0)
         } else {
             0.0
         };
