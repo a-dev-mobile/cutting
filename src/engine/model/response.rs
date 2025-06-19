@@ -331,9 +331,19 @@ impl StatusCode {
         *self as i32
     }
 
+    /// Возвращает числовое значение (альтернативное имя)
+    pub fn get_value(&self) -> i32 {
+        self.value()
+    }
+
     /// Возвращает строковое значение
     pub fn to_string(&self) -> String {
         self.value().to_string()
+    }
+
+    /// Возвращает строковое значение (альтернативное имя)
+    pub fn get_string_value(&self) -> String {
+        self.to_string()
     }
 
     /// Создает из числового значения

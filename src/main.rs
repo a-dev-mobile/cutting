@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use cutting_cli::engine::service::{CutListOptimizer, CutListOptimizerService};
+use cutting_cli::engine::service::CutListOptimizerService;
 use cutting_cli::engine::logger::CutListLoggerImpl;
 use cutting_cli::engine::model::{
     CalculationRequest, ClientInfo, Configuration, Panel, PerformanceThresholds
@@ -194,9 +194,9 @@ fn run_optimization(
     
     // Создание и инициализация оптимизатора
     let logger = Arc::new(CutListLoggerImpl::new());
-    let mut optimizer = cutting_cli::engine::service::CutListOptimizerImpl::new(logger.clone());
+    let mut optimizer = cutting_cli::engine::service::CutListOptimizerServiceImpl::new(logger.clone());
     
-    optimizer.init_with_config(threads)?;
+    optimizer.init(threads)?;
     
     println!("⚙️  Выполнение оптимизации...");
     
@@ -262,9 +262,7 @@ fn submit_task(input_path: String, threads: usize, verbose: bool) -> Result<(), 
         }
     } else {
         println!("❌ Ошибка отправки задачи");
-        if let Some(error) = result.error_message {
-            println!("   {}", error);
-        }
+        println!("   Код ошибки: {}", result.status_code);
     }
     
     Ok(())
@@ -278,23 +276,27 @@ fn check_status(task_id: String, verbose: bool) -> Result<(), CuttingError> {
     let mut service = cutting_cli::engine::service::CutListOptimizerServiceImpl::new(logger);
     service.init(1)?;
     
-    let status = service.get_task_status(&task_id)?;
+    let status_option = service.get_task_status(&task_id)?;
     
-    println!("📋 Статус: {}", status.status);
-    println!("📈 Прогресс инициализации: {}%", status.init_percentage);
-    println!("📈 Прогресс выполнения: {}%", status.percentage_done);
-    
-    if verbose {
-        if let Some(details) = status.details {
-            println!("📝 Детали: {}", details);
-        }
+    if let Some(status) = status_option {
+        println!("📋 Статус: {}", status.status);
+        println!("📈 Прогресс инициализации: {}%", status.init_percentage);
+        println!("📈 Прогресс выполнения: {}%", status.percentage_done);
         
-        if let Some(solution) = status.solution {
-            println!("📊 Решение найдено:");
-            println!("  - Размещено панелей: {}", solution.panels.len());
-            println!("  - Не поместилось: {}", solution.no_fit_panels.len());
-            println!("  - Эффективность: {:.1}%", solution.statistics.efficiency_percentage);
+        if verbose {
+            if let Some(details) = status.details {
+                println!("📝 Детали: {}", details);
+            }
+            
+            if let Some(solution) = status.solution {
+                println!("📊 Решение найдено:");
+                println!("  - Размещено панелей: {}", solution.panels.len());
+                println!("  - Не поместилось: {}", solution.no_fit_panels.len());
+                println!("  - Эффективность: {:.1}%", solution.statistics.efficiency_percentage);
+            }
         }
+    } else {
+        println!("❌ Задача с ID {} не найдена", task_id);
     }
     
     Ok(())

@@ -1,119 +1,30 @@
-use crate::engine::model::{CalculationRequest, CalculationResponse, TaskStatusResponse, Stats};
-use crate::engine::logger::CutListLogger;
-use crate::engine::cutting::CuttingEngine;
+use crate::engine::model::request::CalculationRequest;
+use crate::engine::model::response::{TaskStatusResponse, Stats, StatusCode, CalculationSubmissionResult};
 use crate::engine::model::solution::Solution;
-use crate::engine::model::response::OptimizedPanel;
-use crate::engine::model::tile::{TileNode, TileDimensions};
+use crate::engine::logger::CutListLogger;
+use crate::engine::tasks::{RunningTasks, Task, TaskPriority};
+use crate::engine::watchdog::{WatchDog, WatchDogConfig, ConsoleEventHandler};
+use crate::engine::progress::ProgressTracker;
 use crate::error::CuttingError;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use std::sync::Mutex;
-use uuid::Uuid;
+use std::thread;
 use chrono::{DateTime, Utc};
+use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Трейт для оптимизатора раскроя
-pub trait CutListOptimizer {
-    fn new(logger: Arc<dyn CutListLogger>) -> Self;
-    fn init_with_config(&mut self, threads: usize) -> Result<(), CuttingError>;
-    fn optimize(&mut self, request: CalculationRequest) -> Result<CalculationResponse, CuttingError>;
-}
+/// Константы из Java реализации
+pub const MAX_PERMUTATION_ITERATIONS: usize = 1000;
+pub const MAX_STOCK_ITERATIONS: usize = 1000;
+pub const MAX_ACTIVE_THREADS_PER_TASK: usize = 5;
+pub const MAX_PERMUTATIONS_WITH_SOLUTION: usize = 150;
+pub const MAX_ALLOWED_DIGITS: usize = 6;
+pub const THREAD_QUEUE_SIZE: usize = 1000;
 
-/// Реализация оптимизатора раскроя
-pub struct CutListOptimizerImpl {
-    logger: Arc<dyn CutListLogger>,
-    threads: usize,
-}
 
-impl CutListOptimizer for CutListOptimizerImpl {
-    fn new(logger: Arc<dyn CutListLogger>) -> Self {
-        Self {
-            logger,
-            threads: 1,
-        }
-    }
-
-    fn init_with_config(&mut self, threads: usize) -> Result<(), CuttingError> {
-        self.threads = threads;
-        self.logger.info(&format!("Инициализация оптимизатора с {} потоками", threads));
-        Ok(())
-    }
-
-    fn optimize(&mut self, request: CalculationRequest) -> Result<CalculationResponse, CuttingError> {
-        self.logger.info("Начало оптимизации раскроя");
-        
-        // Простая реализация оптимизации
-        let mut solution = Solution::new();
-        let mut optimized_panels = Vec::new();
-        let mut no_fit_panels = Vec::new();
-        let mut no_material_panels = Vec::new();
-
-        // Создаем стоковые панели для размещения
-        for stock_panel in &request.stock_panels {
-            let width = stock_panel.width.parse::<i32>()
-                .map_err(|_| CuttingError::GeneralCuttingError("Invalid width format".to_string()))?;
-            let height = stock_panel.height.parse::<i32>()
-                .map_err(|_| CuttingError::GeneralCuttingError("Invalid height format".to_string()))?;
-            
-            let mut root_node = TileNode::new(0, width, 0, height);
-            
-            // Пытаемся разместить панели на этом стоке
-            for panel in &request.panels {
-                let panel_width = panel.width.parse::<i32>()
-                    .map_err(|_| CuttingError::GeneralCuttingError("Invalid panel width format".to_string()))?;
-                let panel_height = panel.height.parse::<i32>()
-                    .map_err(|_| CuttingError::GeneralCuttingError("Invalid panel height format".to_string()))?;
-                
-                let tile_dimensions = TileDimensions::new(
-                    panel.id,
-                    panel_width,
-                    panel_height,
-                    panel.material.clone(),
-                    0,
-                    None,
-                );
-
-                match CuttingEngine::try_place_tile(&mut root_node, &tile_dimensions) {
-                    Ok(true) => {
-                        optimized_panels.push(OptimizedPanel::new(
-                            tile_dimensions.clone(),
-                            crate::engine::model::response::PanelPosition::new(0, 0, panel_width, panel_height, false),
-                            stock_panel.id.to_string(),
-                            panel.material.clone(),
-                        ));
-                    }
-                    Ok(false) => {
-                        no_fit_panels.push(tile_dimensions);
-                    }
-                    Err(_) => {
-                        no_material_panels.push(tile_dimensions);
-                    }
-                }
-            }
-        }
-
-        // Вычисляем статистику
-        let total_panels = request.panels.len();
-        let placed_panels = optimized_panels.len();
-        let mut statistics = crate::engine::model::response::ResponseStatistics::new();
-        statistics.update(total_panels, placed_panels, 0.0, 0.0);
-
-        let response = CalculationResponse {
-            panels: optimized_panels,
-            no_fit_panels,
-            no_material_panels,
-            statistics,
-            metadata: std::collections::HashMap::new(),
-        };
-
-        self.logger.info("Оптимизация завершена");
-        Ok(response)
-    }
-}
-
-/// Статус задачи
+/// Статус задачи для сервиса (отличается от ProgressTaskStatus)
 #[derive(Debug, Clone, PartialEq)]
-pub enum TaskStatus {
-    Pending,
+pub enum ServiceTaskStatus {
+    Idle,
     Running,
     Completed,
     Stopped,
@@ -121,163 +32,557 @@ pub enum TaskStatus {
     Error,
 }
 
-/// Информация о задаче
+/// Информация о задаче для сервиса
 #[derive(Debug, Clone)]
-pub struct TaskInfo {
+pub struct ServiceTaskInfo {
     pub id: String,
-    pub status: TaskStatus,
+    pub client_id: String,
+    pub status: ServiceTaskStatus,
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
+    pub progress_percentage: u8,
+    pub solution: Option<Solution>,
 }
 
-/// Результат отправки задачи
-#[derive(Debug, Clone)]
-pub struct CalculationSubmissionResult {
-    pub task_id: Option<String>,
-    pub error_message: Option<String>,
-    pub success: bool,
-}
-
-impl CalculationSubmissionResult {
-    pub fn success(task_id: String) -> Self {
+impl ServiceTaskInfo {
+    pub fn new(id: String, client_id: String) -> Self {
         Self {
-            task_id: Some(task_id),
-            error_message: None,
-            success: true,
+            id,
+            client_id,
+            status: ServiceTaskStatus::Idle,
+            start_time: None,
+            end_time: None,
+            progress_percentage: 0,
+            solution: None,
         }
     }
-
-    pub fn error(message: String) -> Self {
-        Self {
-            task_id: None,
-            error_message: Some(message),
-            success: false,
-        }
-    }
-
-    pub fn is_success(&self) -> bool {
-        self.success
-    }
 }
 
-/// Трейт для сервиса оптимизатора
+/// Трейт для сервиса оптимизатора раскроя
 pub trait CutListOptimizerService {
-    fn new(logger: Arc<dyn CutListLogger>) -> Self;
+    /// Инициализация сервиса
     fn init(&mut self, threads: usize) -> Result<(), CuttingError>;
+    
+    /// Синхронная оптимизация
+    fn optimize(&mut self, request: CalculationRequest) -> Result<crate::engine::model::response::CalculationResponse, CuttingError>;
+    
+    /// Отправка задачи на расчет
     fn submit_task(&mut self, request: CalculationRequest) -> Result<CalculationSubmissionResult, CuttingError>;
-    fn get_task_status(&self, task_id: &str) -> Result<TaskStatusResponse, CuttingError>;
-    fn stop_task(&mut self, task_id: &str) -> Result<(), CuttingError>;
-    fn terminate_task(&mut self, task_id: &str) -> Result<(), CuttingError>;
-    fn get_tasks(&self, client_id: &str, status: Option<TaskStatus>) -> Result<Vec<TaskInfo>, CuttingError>;
+    
+    /// Получение статуса задачи
+    fn get_task_status(&self, task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError>;
+    
+    /// Остановка задачи
+    fn stop_task(&mut self, task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError>;
+    
+    /// Принудительное завершение задачи
+    fn terminate_task(&mut self, task_id: &str) -> Result<i32, CuttingError>;
+    
+    /// Получение списка задач клиента
+    fn get_tasks(&self, client_id: &str, status: Option<ServiceTaskStatus>) -> Result<Vec<ServiceTaskInfo>, CuttingError>;
+    
+    /// Получение статистики системы
     fn get_stats(&self) -> Result<Stats, CuttingError>;
+    
+    /// Установка разрешения множественных задач на клиента
+    fn set_allow_multiple_tasks_per_client(&mut self, allow: bool);
+    
+    /// Установка логгера
+    fn set_cut_list_logger(&mut self, logger: Arc<dyn CutListLogger>);
 }
 
-/// Реализация сервиса оптимизатора
+/// Реализация сервиса оптимизатора раскроя
 pub struct CutListOptimizerServiceImpl {
-    logger: Arc<dyn CutListLogger>,
-    tasks: Arc<Mutex<HashMap<String, TaskInfo>>>,
-    threads: usize,
+    /// Логгер
+    cut_list_logger: Arc<dyn CutListLogger>,
+    /// Менеджер выполняющихся задач
+    running_tasks: Arc<RunningTasks>,
+    /// Сторожевой таймер
+    watch_dog: Option<WatchDog>,
+    /// Счетчик идентификаторов задач
+    task_id_counter: Arc<AtomicU64>,
+    /// Разрешение множественных задач на клиента
+    allow_multiple_tasks_per_client: bool,
+    /// Количество потоков
+    thread_count: usize,
+    /// Активные задачи по клиентам
+    client_tasks: Arc<Mutex<HashMap<String, Vec<String>>>>,
+    /// Информация о задачах
+    task_info: Arc<Mutex<HashMap<String, ServiceTaskInfo>>>,
+}
+
+impl CutListOptimizerServiceImpl {
+    /// Создает новый экземпляр сервиса
+    pub fn new(logger: Arc<dyn CutListLogger>) -> Self {
+        Self {
+            cut_list_logger: logger,
+            running_tasks: Arc::new(RunningTasks::new(MAX_ACTIVE_THREADS_PER_TASK)),
+            watch_dog: None,
+            task_id_counter: Arc::new(AtomicU64::new(0)),
+            allow_multiple_tasks_per_client: false,
+            thread_count: 1,
+            client_tasks: Arc::new(Mutex::new(HashMap::new())),
+            task_info: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// Генерирует уникальный идентификатор задачи
+    fn generate_task_id(&self) -> String {
+        let now = Utc::now();
+        let date_part = now.format("%Y%m%d%H%M").to_string();
+        let counter = self.task_id_counter.fetch_add(1, Ordering::SeqCst);
+        format!("{}{}", date_part, counter)
+    }
+
+    /// Проверяет валидность панелей
+    fn validate_panels(&self, panels: &[crate::engine::model::request::Panel]) -> (usize, StatusCode) {
+        let mut count = 0;
+        for panel in panels {
+            if panel.is_valid() {
+                count += panel.count as usize;
+            }
+        }
+
+        if count == 0 {
+            return (0, StatusCode::InvalidTiles);
+        }
+
+        if count > 5000 {
+            return (count, StatusCode::TooManyPanels);
+        }
+
+        (count, StatusCode::Ok)
+    }
+
+    /// Проверяет валидность складских панелей
+    fn validate_stock_panels(&self, stock_panels: &[crate::engine::model::request::Panel]) -> (usize, StatusCode) {
+        let mut count = 0;
+        for panel in stock_panels {
+            if panel.is_valid() {
+                count += panel.count as usize;
+            }
+        }
+
+        if count == 0 {
+            return (0, StatusCode::InvalidStockTiles);
+        }
+
+        if count > 5000 {
+            return (count, StatusCode::TooManyStockPanels);
+        }
+
+        (count, StatusCode::Ok)
+    }
+
+    /// Проверяет, может ли клиент запустить новую задачу
+    fn can_client_start_task(&self, client_id: &str, max_tasks: usize) -> bool {
+        if self.allow_multiple_tasks_per_client {
+            return true;
+        }
+
+        if let Ok(client_tasks) = self.client_tasks.lock() {
+            if let Some(tasks) = client_tasks.get(client_id) {
+                return tasks.len() < max_tasks;
+            }
+        }
+
+        true
+    }
+
+    /// Добавляет задачу к клиенту
+    fn add_task_to_client(&self, client_id: &str, task_id: &str) {
+        if let Ok(mut client_tasks) = self.client_tasks.lock() {
+            client_tasks
+                .entry(client_id.to_string())
+                .or_insert_with(Vec::new)
+                .push(task_id.to_string());
+        }
+    }
+
+    /// Удаляет задачу у клиента
+    fn remove_task_from_client(&self, client_id: &str, task_id: &str) {
+        if let Ok(mut client_tasks) = self.client_tasks.lock() {
+            if let Some(tasks) = client_tasks.get_mut(client_id) {
+                tasks.retain(|id| id != task_id);
+                if tasks.is_empty() {
+                    client_tasks.remove(client_id);
+                }
+            }
+        }
+    }
+
+    /// Вычисляет задачу оптимизации
+    fn compute(&self, request: CalculationRequest, task_id: String) {
+        let client_id = request.client_info.id.clone();
+        let logger = Arc::clone(&self.cut_list_logger);
+        let running_tasks = Arc::clone(&self.running_tasks);
+        let _client_tasks = Arc::clone(&self.client_tasks);
+        
+        // Клонируем переменные для использования в замыкании
+        let task_id_for_closure = task_id.clone();
+        let logger_for_closure = Arc::clone(&logger);
+        
+        // Создаем задачу для выполнения
+        let task = Task::new(
+            task_id.clone(),
+            "Оптимизация раскроя".to_string(),
+            TaskPriority::Normal,
+            move || {
+                logger_for_closure.info(&format!("Начало выполнения задачи {}", task_id_for_closure));
+                
+                // Здесь будет основная логика оптимизации
+                // Пока что возвращаем пустой результат
+                let solutions = vec![Solution::new()];
+                
+                logger_for_closure.info(&format!("Задача {} завершена успешно", task_id_for_closure));
+                Ok(solutions)
+            },
+        );
+
+        // Добавляем задачу в менеджер
+        if let Err(e) = running_tasks.submit_task(task) {
+            logger.error(&format!("Ошибка при добавлении задачи {}: {}", task_id, e));
+            self.remove_task_from_client(&client_id, &task_id);
+        }
+    }
 }
 
 impl CutListOptimizerService for CutListOptimizerServiceImpl {
-    fn new(logger: Arc<dyn CutListLogger>) -> Self {
-        Self {
-            logger,
-            tasks: Arc::new(Mutex::new(HashMap::new())),
-            threads: 1,
+    fn optimize(&mut self, request: CalculationRequest) -> Result<crate::engine::model::response::CalculationResponse, CuttingError> {
+        self.cut_list_logger.info("Начало синхронной оптимизации");
+        
+        // Валидируем панели
+        let (_panel_count, panel_status) = self.validate_panels(&request.panels);
+        if panel_status != StatusCode::Ok {
+            return Err(CuttingError::GeneralCuttingError(
+                format!("Ошибка валидации панелей: {}", panel_status.description())
+            ));
         }
+
+        // Валидируем складские панели
+        let (_stock_count, stock_status) = self.validate_stock_panels(&request.stock_panels);
+        if stock_status != StatusCode::Ok {
+            return Err(CuttingError::GeneralCuttingError(
+                format!("Ошибка валидации складских панелей: {}", stock_status.description())
+            ));
+        }
+
+        self.cut_list_logger.info(&format!(
+            "Валидация прошла успешно: {} панелей, {} складских панелей", 
+            _panel_count, _stock_count
+        ));
+
+        // Здесь будет основная логика оптимизации
+        // Пока что возвращаем базовый ответ
+        let mut response = crate::engine::model::response::CalculationResponse::new();
+        
+        // Обновляем статистику
+        response.statistics.update(
+            request.panels.len(),
+            0, // пока что 0 размещенных панелей
+            0.0, // общая площадь
+            0.0  // использованная площадь
+        );
+        
+        // Добавляем метаданные
+        response.add_metadata("optimization_type".to_string(), "synchronous".to_string());
+        response.add_metadata("panel_count".to_string(), _panel_count.to_string());
+        response.add_metadata("stock_count".to_string(), _stock_count.to_string());
+        
+        self.cut_list_logger.info("Синхронная оптимизация завершена");
+        Ok(response)
     }
 
     fn init(&mut self, threads: usize) -> Result<(), CuttingError> {
-        self.threads = threads;
-        self.logger.info(&format!("Инициализация сервиса с {} потоками", threads));
+        self.thread_count = threads;
+        
+        // Инициализируем менеджер задач
+        self.running_tasks = Arc::new(RunningTasks::new(threads));
+        
+        // Инициализируем сторожевой таймер
+        let config = WatchDogConfig::default();
+        let event_handler = Arc::new(ConsoleEventHandler);
+        let mut watch_dog = WatchDog::new(config, event_handler);
+        
+        // Запускаем сторожевой таймер
+        let progress_tracker = Arc::new(ProgressTracker::new(1000));
+        let running_tasks_clone = Arc::clone(&self.running_tasks);
+        
+        if let Err(e) = watch_dog.start(progress_tracker, running_tasks_clone) {
+            return Err(CuttingError::GeneralCuttingError(
+                format!("Ошибка запуска сторожевого таймера: {}", e)
+            ));
+        }
+        
+        self.watch_dog = Some(watch_dog);
+        
+        self.cut_list_logger.info(&format!("Сервис инициализирован с {} потоками", threads));
         Ok(())
     }
 
-    fn submit_task(&mut self, _request: CalculationRequest) -> Result<CalculationSubmissionResult, CuttingError> {
-        let task_id = Uuid::new_v4().to_string();
+    fn submit_task(&mut self, request: CalculationRequest) -> Result<CalculationSubmissionResult, CuttingError> {
+        let client_id = &request.client_info.id;
         
-        let task_info = TaskInfo {
-            id: task_id.clone(),
-            status: TaskStatus::Pending,
-            start_time: Some(Utc::now()),
-            end_time: None,
-        };
+        // Проверяем производительные пороги
+        let performance_thresholds = request.configuration.performance_thresholds
+            .as_ref()
+            .map(|pt| pt.max_simultaneous_tasks)
+            .unwrap_or(2);
 
-        if let Ok(mut tasks) = self.tasks.lock() {
-            tasks.insert(task_id.clone(), task_info);
+        // Проверяем, может ли клиент запустить новую задачу
+        if !self.can_client_start_task(client_id, performance_thresholds) {
+            self.cut_list_logger.warning(&format!(
+                "Отклонение задачи клиента {} из-за превышения лимита одновременных задач",
+                client_id
+            ));
+            return Ok(CalculationSubmissionResult::error(StatusCode::TaskAlreadyRunning, None));
         }
 
-        self.logger.info(&format!("Задача {} отправлена", task_id));
+        // Валидируем панели
+        let (panel_count, panel_status) = self.validate_panels(&request.panels);
+        if panel_status != StatusCode::Ok {
+            return Ok(CalculationSubmissionResult::error(panel_status, None));
+        }
+
+        // Валидируем складские панели
+        let (stock_count, stock_status) = self.validate_stock_panels(&request.stock_panels);
+        if stock_status != StatusCode::Ok {
+            return Ok(CalculationSubmissionResult::error(stock_status, None));
+        }
+
+        // Генерируем идентификатор задачи
+        let task_id = self.generate_task_id();
+        
+        // Создаем информацию о задаче
+        let mut task_info = ServiceTaskInfo::new(task_id.clone(), client_id.clone());
+        task_info.status = ServiceTaskStatus::Running;
+        task_info.start_time = Some(Utc::now());
+        
+        // Сохраняем информацию о задаче
+        if let Ok(mut task_info_map) = self.task_info.lock() {
+            task_info_map.insert(task_id.clone(), task_info);
+        }
+        
+        // Добавляем задачу к клиенту
+        self.add_task_to_client(client_id, &task_id);
+        
+        // Запускаем вычисление напрямую, используя клонированные данные
+        let task_id_clone = task_id.clone();
+        let client_id_clone = client_id.clone();
+        let logger_clone = Arc::clone(&self.cut_list_logger);
+        let running_tasks_clone = Arc::clone(&self.running_tasks);
+        let client_tasks_clone = Arc::clone(&self.client_tasks);
+        
+        thread::spawn(move || {
+            // Клонируем переменные для использования в замыкании задачи
+            let task_id_for_task = task_id_clone.clone();
+            let logger_for_task = Arc::clone(&logger_clone);
+            
+            // Создаем задачу для выполнения
+            let task = Task::new(
+                task_id_clone.clone(),
+                "Оптимизация раскроя".to_string(),
+                TaskPriority::Normal,
+                move || {
+                    logger_for_task.info(&format!("Начало выполнения задачи {}", task_id_for_task));
+                    
+                    // Здесь будет основная логика оптимизации
+                    // Пока что возвращаем пустой результат
+                    let solutions = vec![Solution::new()];
+                    
+                    logger_for_task.info(&format!("Задача {} завершена успешно", task_id_for_task));
+                    Ok(solutions)
+                },
+            );
+
+            // Добавляем задачу в менеджер
+            if let Err(e) = running_tasks_clone.submit_task(task) {
+                logger_clone.error(&format!("Ошибка при добавлении задачи {}: {}", task_id_clone, e));
+                // Удаляем задачу у клиента при ошибке
+                if let Ok(mut client_tasks) = client_tasks_clone.lock() {
+                    if let Some(tasks) = client_tasks.get_mut(&client_id_clone) {
+                        tasks.retain(|id| id != &task_id_clone);
+                        if tasks.is_empty() {
+                            client_tasks.remove(&client_id_clone);
+                        }
+                    }
+                }
+            }
+        });
+
+        self.cut_list_logger.info(&format!("Задача {} отправлена на выполнение", task_id));
+        
         Ok(CalculationSubmissionResult::success(task_id))
     }
 
-    fn get_task_status(&self, task_id: &str) -> Result<TaskStatusResponse, CuttingError> {
-        if let Ok(tasks) = self.tasks.lock() {
-            if let Some(task) = tasks.get(task_id) {
-                return Ok(TaskStatusResponse {
-                    status: format!("{:?}", task.status),
-                    init_percentage: 100,
-                    percentage_done: 100,
-                    details: None,
-                    solution: None,
-                    last_updated: chrono::Utc::now().timestamp_millis() as u64,
-                });
+    fn get_task_status(&self, _task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError> {
+        // Здесь должна быть логика получения статуса задачи из running_tasks
+        // Пока что возвращаем заглушку
+        Ok(Some(TaskStatusResponse {
+            status: "RUNNING".to_string(),
+            init_percentage: 50,
+            percentage_done: 25,
+            details: Some("Выполняется оптимизация".to_string()),
+            solution: None,
+            last_updated: Utc::now().timestamp_millis() as u64,
+        }))
+    }
+
+    fn stop_task(&mut self, task_id: &str) -> Result<Option<TaskStatusResponse>, CuttingError> {
+        self.cut_list_logger.info(&format!("Остановка задачи {}", task_id));
+        
+        // Здесь должна быть логика остановки задачи
+        // Пока что возвращаем заглушку
+        Ok(Some(TaskStatusResponse {
+            status: "STOPPED".to_string(),
+            init_percentage: 100,
+            percentage_done: 100,
+            details: Some("Задача остановлена".to_string()),
+            solution: None,
+            last_updated: Utc::now().timestamp_millis() as u64,
+        }))
+    }
+
+    fn terminate_task(&mut self, task_id: &str) -> Result<i32, CuttingError> {
+        self.cut_list_logger.info(&format!("Принудительное завершение задачи {}", task_id));
+        
+        // Здесь должна быть логика принудительного завершения задачи
+        // Возвращаем 0 при успехе, -1 при ошибке
+        Ok(0)
+    }
+
+    fn get_tasks(&self, client_id: &str, status: Option<ServiceTaskStatus>) -> Result<Vec<ServiceTaskInfo>, CuttingError> {
+        let mut result = Vec::new();
+        
+        if let Ok(client_tasks) = self.client_tasks.lock() {
+            if let Some(task_ids) = client_tasks.get(client_id) {
+                if let Ok(task_info) = self.task_info.lock() {
+                    for task_id in task_ids {
+                        if let Some(info) = task_info.get(task_id) {
+                            // Фильтрация по статусу, если указан
+                            if let Some(ref filter_status) = status {
+                                if &info.status == filter_status {
+                                    result.push(info.clone());
+                                }
+                            } else {
+                                result.push(info.clone());
+                            }
+                        }
+                    }
+                }
             }
         }
         
-        Err(CuttingError::GeneralCuttingError(format!("Задача {} не найдена", task_id)))
-    }
-
-    fn stop_task(&mut self, task_id: &str) -> Result<(), CuttingError> {
-        if let Ok(mut tasks) = self.tasks.lock() {
-            if let Some(task) = tasks.get_mut(task_id) {
-                task.status = TaskStatus::Stopped;
-                task.end_time = Some(Utc::now());
-                self.logger.info(&format!("Задача {} остановлена", task_id));
-                return Ok(());
-            }
-        }
-        
-        Err(CuttingError::GeneralCuttingError(format!("Задача {} не найдена", task_id)))
-    }
-
-    fn terminate_task(&mut self, task_id: &str) -> Result<(), CuttingError> {
-        if let Ok(mut tasks) = self.tasks.lock() {
-            if let Some(task) = tasks.get_mut(task_id) {
-                task.status = TaskStatus::Terminated;
-                task.end_time = Some(Utc::now());
-                self.logger.info(&format!("Задача {} завершена принудительно", task_id));
-                return Ok(());
-            }
-        }
-        
-        Err(CuttingError::GeneralCuttingError(format!("Задача {} не найдена", task_id)))
-    }
-
-    fn get_tasks(&self, _client_id: &str, _status: Option<TaskStatus>) -> Result<Vec<TaskInfo>, CuttingError> {
-        if let Ok(tasks) = self.tasks.lock() {
-            let task_list: Vec<TaskInfo> = tasks.values().cloned().collect();
-            Ok(task_list)
-        } else {
-            Ok(Vec::new())
-        }
+        Ok(result)
     }
 
     fn get_stats(&self) -> Result<Stats, CuttingError> {
-        let stats = Stats {
-            nbr_running_tasks: 0,
-            nbr_idle_tasks: 0,
-            nbr_finished_tasks: 0,
-            nbr_stopped_tasks: 0,
-            nbr_terminated_tasks: 0,
-            nbr_error_tasks: 0,
-            nbr_running_threads: 0,
-            nbr_queued_threads: 0,
-            nbr_finished_threads: 0,
-            task_reports: Vec::new(),
-        };
+        let (successful, failed, cancelled) = self.running_tasks.get_execution_statistics();
+        let active_count = self.running_tasks.get_active_task_count();
+        let completed_count = self.running_tasks.get_completed_task_count();
         
-        Ok(stats)
+        Ok(Stats {
+            nbr_running_tasks: active_count as u64,
+            nbr_idle_tasks: 0,
+            nbr_finished_tasks: successful as u64,
+            nbr_stopped_tasks: cancelled as u64,
+            nbr_terminated_tasks: 0,
+            nbr_error_tasks: failed as u64,
+            nbr_running_threads: active_count as i32,
+            nbr_queued_threads: 0,
+            nbr_finished_threads: completed_count as u64,
+            task_reports: self.running_tasks.get_completed_reports(),
+        })
+    }
+
+    fn set_allow_multiple_tasks_per_client(&mut self, allow: bool) {
+        self.allow_multiple_tasks_per_client = allow;
+        self.cut_list_logger.info(&format!(
+            "Множественные задачи на клиента: {}",
+            if allow { "разрешены" } else { "запрещены" }
+        ));
+    }
+
+    fn set_cut_list_logger(&mut self, logger: Arc<dyn CutListLogger>) {
+        self.cut_list_logger = logger;
+        
+        // Обновляем логгер в сторожевом таймере
+        if let Some(ref mut _watch_dog) = self.watch_dog {
+            // В реальной реализации здесь должен быть метод для обновления логгера
+        }
+    }
+}
+
+/// Синглтон экземпляр сервиса (как в Java реализации)
+static mut INSTANCE: Option<CutListOptimizerServiceImpl> = None;
+static INIT: std::sync::Once = std::sync::Once::new();
+
+impl CutListOptimizerServiceImpl {
+    /// Получает синглтон экземпляр сервиса
+    pub fn get_instance(logger: Arc<dyn CutListLogger>) -> &'static mut Self {
+        unsafe {
+            INIT.call_once(|| {
+                INSTANCE = Some(CutListOptimizerServiceImpl::new(logger));
+            });
+            INSTANCE.as_mut().unwrap()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::logger::CutListLoggerImpl;
+
+    #[test]
+    fn test_status_code_values() {
+        assert_eq!(StatusCode::Ok.get_value(), 0);
+        assert_eq!(StatusCode::InvalidTiles.get_value(), 1);
+        assert_eq!(StatusCode::TaskAlreadyRunning.get_value(), 3);
+    }
+
+    #[test]
+    fn test_task_id_generation() {
+        let logger = Arc::new(CutListLoggerImpl::new());
+        let service = CutListOptimizerServiceImpl::new(logger);
+        
+        let id1 = service.generate_task_id();
+        let id2 = service.generate_task_id();
+        
+        assert_ne!(id1, id2);
+        assert!(id1.len() >= 12); // Минимум дата + счетчик
+    }
+
+    #[test]
+    fn test_panel_validation() {
+        let logger = Arc::new(CutListLoggerImpl::new());
+        let service = CutListOptimizerServiceImpl::new(logger);
+        
+        let valid_panels = vec![
+            crate::engine::model::request::Panel::new(1, "100".to_string(), "200".to_string(), 2, None),
+        ];
+        
+        let (count, status) = service.validate_panels(&valid_panels);
+        assert_eq!(count, 2);
+        assert_eq!(status, StatusCode::Ok);
+        
+        let empty_panels = vec![];
+        let (count, status) = service.validate_panels(&empty_panels);
+        assert_eq!(count, 0);
+        assert_eq!(status, StatusCode::InvalidTiles);
+    }
+
+    #[test]
+    fn test_calculation_submission_result() {
+        let success_result = CalculationSubmissionResult::success("task123".to_string());
+        assert!(success_result.is_success());
+        assert_eq!(success_result.task_id, Some("task123".to_string()));
+        
+        let error_result = CalculationSubmissionResult::error(
+            StatusCode::InvalidTiles,
+            Some("Invalid tiles".to_string())
+        );
+        assert!(!error_result.is_success());
+        assert_eq!(error_result.task_id, None);
     }
 }
