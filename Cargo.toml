@@ -2,6 +2,12 @@
 name = "cutting-cli"
 version = "0.1.0"
 edition = "2021"
+default-run = "cutting-cli"
+
+[[bin]]
+name = "cutting-cli"
+path = "src/main.rs"
+
 
 [dependencies]
 clap = { version = "4.5.40", features = ["derive"] }

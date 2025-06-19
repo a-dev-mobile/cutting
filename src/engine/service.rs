@@ -235,49 +235,89 @@ impl CutListOptimizerServiceImpl {
 
     /// Выполняет основную логику оптимизации используя правильную интеграцию с Solution и Mosaic
     fn perform_optimization(&self, request: &CalculationRequest) -> Result<OptimizationResult, CuttingError> {
+        println!("🔧 perform_optimization: Начинаем основную оптимизацию");
         self.cut_list_logger.info("Начинаем основную оптимизацию с правильной интеграцией");
         
-        // Конвертируем панели из запроса в TileDimensions
+        // Конвертируем панели из запроса в TileDimensions с правильным учетом count
         let mut tile_dimensions_list = Vec::new();
+        let tile_id_counter = 1000; // Начинаем с большого числа для уникальности
+        
         for panel in &request.panels {
-            for _ in 0..panel.count {
-                if let (Ok(width), Ok(height)) = (panel.width.parse::<i32>(), panel.height.parse::<i32>()) {
-                    let tile_dimensions = TileDimensions::new(
-                        panel.id,
-                        width,
-                        height,
-                        panel.material.clone(),
-                        0,
-                        panel.label.clone(),
-                    );
-                    tile_dimensions_list.push(tile_dimensions);
+            if panel.is_valid() {
+                if let (Ok(width_f64), Ok(height_f64)) = (panel.width.parse::<f64>(), panel.height.parse::<f64>()) {
+                    let width = width_f64 as i32;
+                    let height = height_f64 as i32;
+                    println!("📦 Обрабатываем панель ID {}: {}x{} count={}", panel.id, width, height, panel.count);
+                    // Создаем count экземпляров каждой панели с уникальными ID
+                    for i in 0..panel.count {
+                        let unique_id = tile_id_counter + (panel.id * 1000) + i;
+                        let tile_dimensions = TileDimensions::new(
+                            unique_id,
+                            width,
+                            height,
+                            panel.material.clone(),
+                            panel.orientation,
+                            panel.label.clone(),
+                        );
+                        println!("  ➕ Создана плитка ID {}: {}x{}", unique_id, width, height);
+                        tile_dimensions_list.push(tile_dimensions);
+                    }
+                } else {
+                    println!("⚠️ Не удалось парсить размеры панели ID {}: width='{}', height='{}'", 
+                        panel.id, panel.width, panel.height);
+                }
+            } else {
+                println!("⚠️ Панель ID {} не валидна: enabled={}, count={}", 
+                    panel.id, panel.enabled, panel.count);
+            }
+        }
+        
+        // Конвертируем складские панели с правильным учетом count
+        let mut stock_tile_dimensions = Vec::new();
+        for stock_panel in &request.stock_panels {
+            if stock_panel.is_valid() {
+                if let (Ok(width), Ok(height)) = (stock_panel.width.parse::<i32>(), stock_panel.height.parse::<i32>()) {
+                    println!("📋 Обрабатываем стоковую панель ID {}: {}x{} count={}", stock_panel.id, width, height, stock_panel.count);
+                    // Создаем count экземпляров каждой складской панели с уникальными ID
+                    for i in 0..stock_panel.count {
+                        let unique_id = tile_id_counter + (stock_panel.id * 1000) + i + 100000; // Смещение для складских панелей
+                        let tile_dimensions = TileDimensions::new(
+                            unique_id,
+                            width,
+                            height,
+                            stock_panel.material.clone(),
+                            stock_panel.orientation,
+                            stock_panel.label.clone(),
+                        );
+                        println!("  ➕ Создана стоковая плитка ID {}: {}x{}", unique_id, width, height);
+                        stock_tile_dimensions.push(tile_dimensions);
+                    }
                 }
             }
         }
         
-        // Конвертируем складские панели
-        let mut stock_tile_dimensions = Vec::new();
-        for stock_panel in &request.stock_panels {
-            for _ in 0..stock_panel.count {
-                if let (Ok(width), Ok(height)) = (stock_panel.width.parse::<i32>(), stock_panel.height.parse::<i32>()) {
-                    let tile_dimensions = TileDimensions::new(
-                        stock_panel.id,
-                        width,
-                        height,
-                        stock_panel.material.clone(),
-                        0,
-                        stock_panel.label.clone(),
-                    );
-                    stock_tile_dimensions.push(tile_dimensions);
-                }
-            }
-        }
+        println!("📊 Итого создано: {} панелей для размещения, {} стоковых панелей", 
+            tile_dimensions_list.len(), stock_tile_dimensions.len());
         
         self.cut_list_logger.info(&format!(
             "Подготовлено {} панелей и {} складских панелей для оптимизации",
             tile_dimensions_list.len(),
             stock_tile_dimensions.len()
         ));
+        
+        // Проверяем, что у нас есть панели для размещения
+        if tile_dimensions_list.is_empty() {
+            println!("❌ Нет валидных панелей для размещения");
+            self.cut_list_logger.warning("Нет валидных панелей для размещения");
+            return Ok(OptimizationResult::new());
+        }
+        
+        // Проверяем, что у нас есть складские панели
+        if stock_tile_dimensions.is_empty() {
+            println!("❌ Нет валидных складских панелей");
+            self.cut_list_logger.warning("Нет валидных складских панелей");
+            return Ok(OptimizationResult::new());
+        }
         
         // Сортируем панели по убыванию площади (как в Java версии)
         tile_dimensions_list.sort_by(|a, b| {
@@ -286,8 +326,11 @@ impl CutListOptimizerServiceImpl {
             area_b.cmp(&area_a)
         });
         
+        println!("🔄 Запуск compute_optimal_solution...");
         // Выполняем оптимизацию используя правильный алгоритм по образцу Java
         let optimization_result = self.compute_optimal_solution(&tile_dimensions_list, &stock_tile_dimensions)?;
+        
+        println!("✅ compute_optimal_solution завершен: размещено {} панелей", optimization_result.placed_panels_count);
         
         self.cut_list_logger.info(&format!(
             "Оптимизация завершена: размещено {}/{} панелей, эффективность {:.2}%, разрезов: {}",
@@ -306,10 +349,19 @@ impl CutListOptimizerServiceImpl {
         tiles: &[TileDimensions],
         stock_tiles: &[TileDimensions],
     ) -> Result<OptimizationResult, CuttingError> {
+        println!("🔧 compute_optimal_solution: Начинаем алгоритм оптимизации");
+        println!("📊 Входные данные: {} панелей для размещения, {} стоковых панелей", tiles.len(), stock_tiles.len());
         self.cut_list_logger.info("Запуск алгоритма оптимизации по образцу Java CutListThread");
         
         // Создаем стоковые решения (комбинации складских панелей)
+        println!("🏗️ Генерируем стоковые решения...");
         let stock_solutions = self.generate_stock_solutions(stock_tiles, tiles);
+        println!("✅ Создано {} стоковых решений", stock_solutions.len());
+        
+        if stock_solutions.is_empty() {
+            println!("❌ Нет стоковых решений для обработки!");
+            return Ok(OptimizationResult::new());
+        }
         
         let mut best_solutions = Vec::new();
         let mut total_placed_panels = 0;
@@ -320,6 +372,12 @@ impl CutListOptimizerServiceImpl {
         
         // Перебираем стоковые решения
         for (stock_idx, stock_solution) in stock_solutions.iter().enumerate().take(MAX_STOCK_ITERATIONS) {
+            println!("🔄 Стоковое решение {}/{}: {} панелей, площадь: {}", 
+                stock_idx + 1, stock_solutions.len(),
+                stock_solution.get_stock_tile_dimensions().len(),
+                stock_solution.get_total_area()
+            );
+            
             self.cut_list_logger.info(&format!(
                 "Пробуем стоковое решение {}: {} панелей, площадь: {}",
                 stock_idx + 1,
@@ -328,17 +386,22 @@ impl CutListOptimizerServiceImpl {
             ));
             
             // Генерируем перестановки панелей для размещения
+            println!("🔀 Генерируем перестановки панелей...");
             let permutations = self.generate_tile_permutations(tiles);
+            println!("✅ Создано {} перестановок", permutations.len());
             
             // Перебираем перестановки
             for (perm_idx, permutation) in permutations.iter().enumerate().take(MAX_PERMUTATION_ITERATIONS.min(20)) {
                 if perm_idx % 5 == 0 {
+                    println!("🔄 Обрабатываем перестановку {}/{}", perm_idx + 1, permutations.len().min(20));
                     self.cut_list_logger.info(&format!("Обрабатываем перестановку {}", perm_idx + 1));
                 }
                 
                 // Выполняем размещение используя алгоритм как в Java CutListThread.computeSolutions
+                println!("🎯 Запускаем compute_solutions_for_permutation для перестановки {}...", perm_idx + 1);
                 match self.compute_solutions_for_permutation(&permutation, stock_solution) {
                     Ok(solutions) => {
+                        println!("✅ compute_solutions_for_permutation вернул {} решений", solutions.len());
                         if !solutions.is_empty() {
                             let best_solution = &solutions[0]; // Берем лучшее решение
                             
@@ -352,6 +415,9 @@ impl CutListOptimizerServiceImpl {
                             };
                             let solution_cuts = best_solution.get_cuts_count();
                             
+                            println!("📊 Результат перестановки {}: размещено {}/{} панелей, эффективность {:.2}%", 
+                                perm_idx + 1, solution_placed, tiles.len(), solution_efficiency);
+                            
                             self.cut_list_logger.info(&format!(
                                 "Перестановка {}: размещено {}/{} панелей, эффективность {:.2}%",
                                 perm_idx + 1,
@@ -363,6 +429,9 @@ impl CutListOptimizerServiceImpl {
                             // Проверяем, лучше ли это решение
                             if solution_placed > total_placed_panels || 
                                (solution_placed == total_placed_panels && solution_efficiency > best_efficiency) {
+                                
+                                println!("🎉 Новое лучшее решение: размещено {}/{} панелей, эффективность {:.2}%",
+                                    solution_placed, tiles.len(), solution_efficiency);
                                 
                                 self.cut_list_logger.info(&format!(
                                     "Новое лучшее решение: размещено {}/{} панелей, эффективность {:.2}%",
@@ -378,9 +447,12 @@ impl CutListOptimizerServiceImpl {
                                 cuts_count = solution_cuts as usize;
                                 best_efficiency = solution_efficiency;
                             }
+                        } else {
+                            println!("⚠️ compute_solutions_for_permutation вернул пустой список решений");
                         }
                     }
                     Err(e) => {
+                        println!("❌ Ошибка при обработке перестановки {}: {}", perm_idx + 1, e);
                         self.cut_list_logger.warning(&format!(
                             "Ошибка при обработке перестановки {}: {}",
                             perm_idx + 1, e
@@ -390,6 +462,7 @@ impl CutListOptimizerServiceImpl {
                 
                 // Если достигли отличного размещения, прекращаем поиск
                 if total_placed_panels == tiles.len() && best_efficiency > 95.0 {
+                    println!("🎯 Достигнуто отличное размещение, прекращаем поиск");
                     self.cut_list_logger.info("Достигнуто отличное размещение, прекращаем поиск");
                     break;
                 }
@@ -397,6 +470,7 @@ impl CutListOptimizerServiceImpl {
             
             // Если все панели размещены с хорошей эффективностью, прекращаем
             if total_placed_panels == tiles.len() && best_efficiency > 80.0 {
+                println!("🎯 Все панели размещены с хорошей эффективностью, завершаем оптимизацию");
                 self.cut_list_logger.info("Все панели размещены с хорошей эффективностью, завершаем оптимизацию");
                 break;
             }
@@ -407,6 +481,9 @@ impl CutListOptimizerServiceImpl {
         } else {
             0.0
         };
+        
+        println!("🏁 Финальный результат: размещено {}/{} панелей, эффективность {:.2}%", 
+            total_placed_panels, tiles.len(), efficiency);
         
         Ok(OptimizationResult {
             solutions: best_solutions,
@@ -599,10 +676,12 @@ impl CutListOptimizerServiceImpl {
 
 impl CutListOptimizerService for CutListOptimizerServiceImpl {
     fn optimize(&mut self, request: CalculationRequest) -> Result<CalculationResponse, CuttingError> {
+        println!("🔧 Начало синхронной оптимизации через CalculationRequest");
         self.cut_list_logger.info("Начало синхронной оптимизации");
         
         // Валидируем панели
         let (_panel_count, panel_status) = self.validate_panels(&request.panels);
+        println!("📋 Валидация панелей: count={}, status={:?}", _panel_count, panel_status);
         if panel_status != StatusCode::Ok {
             return Err(CuttingError::GeneralCuttingError(
                 format!("Ошибка валидации панелей: {}", panel_status.description())
@@ -611,6 +690,7 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
 
         // Валидируем складские панели
         let (_stock_count, stock_status) = self.validate_stock_panels(&request.stock_panels);
+        println!("📦 Валидация складских панелей: count={}, status={:?}", _stock_count, stock_status);
         if stock_status != StatusCode::Ok {
             return Err(CuttingError::GeneralCuttingError(
                 format!("Ошибка валидации складских панелей: {}", stock_status.description())
@@ -622,8 +702,10 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
             _panel_count, _stock_count
         ));
 
+        println!("🚀 Запуск perform_optimization...");
         // Выполняем оптимизацию
         let optimization_result = self.perform_optimization(&request)?;
+        println!("✅ perform_optimization завершен: размещено {} панелей", optimization_result.placed_panels_count);
         
         // Создаем ответ с результатами оптимизации
         let mut response = CalculationResponse::new();
@@ -641,8 +723,45 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
             optimization_result.used_area
         );
         
-        // TODO: Конвертируем решения в панели ответа
-        // Эта логика будет реализована отдельно
+        // Конвертируем решения в панели ответа
+        if !optimization_result.solutions.is_empty() {
+            let best_solution = &optimization_result.solutions[0];
+            
+            // Получаем все размещенные панели из мозаик
+            let final_tile_nodes = best_solution.get_final_tile_nodes();
+            for tile_node in final_tile_nodes {
+                let tile_dimensions = TileDimensions::new(
+                    tile_node.external_id,
+                    tile_node.get_width(),
+                    tile_node.get_height(),
+                    "DEFAULT_MATERIAL".to_string(),
+                    0,
+                    None,
+                );
+                
+                let position = crate::engine::model::response::PanelPosition::new(
+                    tile_node.get_x1(),
+                    tile_node.get_y1(),
+                    tile_node.get_width(),
+                    tile_node.get_height(),
+                    tile_node.is_rotated,
+                );
+                
+                let optimized_panel = crate::engine::model::response::OptimizedPanel::new(
+                    tile_dimensions,
+                    position,
+                    "stock_0".to_string(), // TODO: Получить правильный stock_id из мозаики
+                    "DEFAULT_MATERIAL".to_string(),
+                );
+                
+                response.panels.push(optimized_panel);
+            }
+            
+            // Добавляем панели, которые не поместились
+            for no_fit_panel in best_solution.get_no_fit_panels() {
+                response.no_fit_panels.push(no_fit_panel.clone());
+            }
+        }
         
         // Добавляем метаданные
         response.add_metadata("optimization_type".to_string(), "synchronous".to_string());
