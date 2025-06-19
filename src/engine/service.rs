@@ -628,9 +628,14 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         // Создаем ответ с результатами оптимизации
         let mut response = CalculationResponse::new();
         
+        // Подсчитываем общее количество панелей из запроса (с учетом count)
+        let total_panels_count: usize = request.panels.iter()
+            .map(|panel| panel.count as usize)
+            .sum();
+        
         // Обновляем статистику с реальными данными
         response.statistics.update(
-            request.panels.len(),
+            total_panels_count,
             optimization_result.placed_panels_count,
             optimization_result.total_area,
             optimization_result.used_area
