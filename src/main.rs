@@ -234,6 +234,8 @@ fn run_optimization(
         println!("  - Размещено панелей: {}", result.statistics.placed_panels);
         println!("  - Не поместилось: {}", result.statistics.unplaced_panels);
         println!("  - Без материала: {}", result.no_material_panels.len());
+        println!("  - Эффективность: {:.2}%", result.statistics.efficiency_percentage);
+        println!("  - Использовано стоковых панелей: {}", result.statistics.stock_panels_used);
         println!();
     }
     

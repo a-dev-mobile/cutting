@@ -6,8 +6,18 @@ use crate::engine::model::solution::Solution;
 use crate::engine::model::tile::TileDimensions;
 use crate::engine::stock::StockSolution;
 use crate::error::CuttingError;
+use crate::validate_calculation_request;
 use std::collections::HashMap;
-
+/// Информация об исходной панели для отслеживания
+#[derive(Debug, Clone)]
+struct OriginalPanelInfo {
+    original_width: f64,
+    original_height: f64,
+    scaled_width: i32,
+    scaled_height: i32,
+    count: i32,
+    index: i32,
+}
 /// Результат оптимизации
 #[derive(Debug, Clone)]
 pub struct OptimizationResult {
@@ -42,33 +52,56 @@ impl CutListOptimizerServiceImpl {
         self.cut_list_logger
             .info("Начинаем основную оптимизацию с правильной интеграцией");
 
-        // Конвертируем панели из запроса в TileDimensions с правильным учетом count
+        // ИСПРАВЛЕНИЕ 1: Используем правильную валидацию и масштабирование
+        let validation_summary = validate_calculation_request(request)
+            .map_err(|e| CuttingError::GeneralCuttingError(format!("Ошибка валидации: {}", e)))?;
+        
+        println!("✅ Валидация прошла успешно: {}", validation_summary);
+
+        // ИСПРАВЛЕНИЕ 2: Правильное создание TileDimensions с сохранением исходных ID
         let mut tile_dimensions_list = Vec::new();
-        let tile_id_counter = 1000;
+        let mut original_panel_mapping = std::collections::HashMap::new(); // Сохраняем связь
 
         for panel in &request.panels {
             if panel.is_valid() {
                 if let (Ok(width_f64), Ok(height_f64)) =
                     (panel.width.parse::<f64>(), panel.height.parse::<f64>())
                 {
-                    let width = width_f64 as i32;
-                    let height = height_f64 as i32;
+                    // ИСПРАВЛЕНИЕ 3: Применяем масштабирование как в Java
+                    let scaled_width = (width_f64 * validation_summary.scale_factor).round() as i32;
+                    let scaled_height = (height_f64 * validation_summary.scale_factor).round() as i32;
+                    
                     println!(
-                        "📦 Обрабатываем панель ID {}: {}x{} count={}",
-                        panel.id, width, height, panel.count
+                        "📦 Обрабатываем панель ID {}: {}x{} -> {}x{} (масштаб: {:.2}) count={}",
+                        panel.id, width_f64, height_f64, scaled_width, scaled_height, 
+                        validation_summary.scale_factor, panel.count
                     );
 
                     for i in 0..panel.count {
-                        let unique_id = tile_id_counter + (panel.id * 1000) + i;
+                        // ИСПРАВЛЕНИЕ 4: Используем исходный ID панели для отслеживания
                         let tile_dimensions = TileDimensions::new(
-                            unique_id,
-                            width,
-                            height,
+                            panel.id, // Используем исходный ID панели
+                            scaled_width,
+                            scaled_height,
                             panel.material.clone(),
                             panel.orientation,
                             panel.label.clone(),
                         );
-                        println!("  ➕ Создана плитка ID {}: {}x{}", unique_id, width, height);
+                        
+                        // Сохраняем информацию об исходных размерах
+                        original_panel_mapping.insert(
+                            panel.id,
+                            OriginalPanelInfo {
+                                original_width: width_f64,
+                                original_height: height_f64,
+                                scaled_width,
+                                scaled_height,
+                                count: panel.count,
+                                index: i,
+                            }
+                        );
+                        
+                        println!("  ➕ Создана плитка ID {}: {}x{}", panel.id, scaled_width, scaled_height);
                         tile_dimensions_list.push(tile_dimensions);
                     }
                 } else {
@@ -82,32 +115,47 @@ impl CutListOptimizerServiceImpl {
 
         // Конвертируем складские панели с правильным учетом count
         let mut stock_tile_dimensions = Vec::new();
+        let mut original_stock_mapping = std::collections::HashMap::new();
+
         for stock_panel in &request.stock_panels {
             if stock_panel.is_valid() {
                 if let (Ok(width_f64), Ok(height_f64)) = (
                     stock_panel.width.parse::<f64>(),
                     stock_panel.height.parse::<f64>(),
                 ) {
-                    let width = width_f64 as i32;
-                    let height = height_f64 as i32;
+                    let scaled_width = (width_f64 * validation_summary.scale_factor).round() as i32;
+                    let scaled_height = (height_f64 * validation_summary.scale_factor).round() as i32;
+                    
                     println!(
-                        "📋 Обрабатываем стоковую панель ID {}: {}x{} count={}",
-                        stock_panel.id, width, height, stock_panel.count
+                        "📋 Обрабатываем стоковую панель ID {}: {}x{} -> {}x{} count={}",
+                        stock_panel.id, width_f64, height_f64, scaled_width, scaled_height, stock_panel.count
                     );
 
                     for i in 0..stock_panel.count {
-                        let unique_id = tile_id_counter + (stock_panel.id * 1000) + i + 100000;
                         let tile_dimensions = TileDimensions::new(
-                            unique_id,
-                            width,
-                            height,
+                            stock_panel.id, // Используем исходный ID стоковой панели
+                            scaled_width,
+                            scaled_height,
                             stock_panel.material.clone(),
                             stock_panel.orientation,
                             stock_panel.label.clone(),
                         );
+                        
+                        original_stock_mapping.insert(
+                            stock_panel.id,
+                            OriginalPanelInfo {
+                                original_width: width_f64,
+                                original_height: height_f64,
+                                scaled_width,
+                                scaled_height,
+                                count: stock_panel.count,
+                                index: i,
+                            }
+                        );
+                        
                         println!(
                             "  ➕ Создана стоковая плитка ID {}: {}x{}",
-                            unique_id, width, height
+                            stock_panel.id, scaled_width, scaled_height
                         );
                         stock_tile_dimensions.push(tile_dimensions);
                     }
@@ -139,8 +187,11 @@ impl CutListOptimizerServiceImpl {
         });
 
         println!("🔄 Запуск compute_optimal_solution_improved...");
-        let optimization_result =
+        let mut optimization_result =
             self.compute_optimal_solution_improved(&tile_dimensions_list, &stock_tile_dimensions)?;
+
+        // ИСПРАВЛЕНИЕ 6: Проверяем результаты и восстанавливаем исходные размеры
+        self.validate_and_fix_results(&mut optimization_result, &original_panel_mapping, &original_stock_mapping, validation_summary.scale_factor)?;
 
         println!(
             "✅ compute_optimal_solution_improved завершен: размещено {} панелей",
@@ -158,6 +209,48 @@ impl CutListOptimizerServiceImpl {
         Ok(optimization_result)
     }
 
+    /// ИСПРАВЛЕНИЕ 7: Валидация и исправление результатов
+    fn validate_and_fix_results(
+        &self,
+        optimization_result: &mut OptimizationResult,
+        original_panel_mapping: &std::collections::HashMap<i32, OriginalPanelInfo>,
+        original_stock_mapping: &std::collections::HashMap<i32, OriginalPanelInfo>,
+        scale_factor: f64,
+    ) -> Result<(), CuttingError> {
+        println!("🔍 Валидируем и исправляем результаты...");
+
+        for solution in &mut optimization_result.solutions {
+            for mosaic in solution.get_mosaics() {
+                let final_nodes = mosaic.get_final_tile_nodes();
+                
+                for node in final_nodes {
+                    if let Some(original_info) = original_panel_mapping.get(&node.external_id) {
+                        // Проверяем, что размеры соответствуют ожидаемым
+                        let expected_width = original_info.scaled_width;
+                        let expected_height = original_info.scaled_height;
+                        
+                        let actual_width = if node.is_rotated { node.get_height() } else { node.get_width() };
+                        let actual_height = if node.is_rotated { node.get_width() } else { node.get_height() };
+                        
+                        if actual_width != expected_width || actual_height != expected_height {
+                            println!(
+                                "⚠️ Несоответствие размеров для панели ID {}: ожидалось {}x{}, получено {}x{} (повернуто: {})",
+                                node.external_id, expected_width, expected_height, 
+                                actual_width, actual_height, node.is_rotated
+                            );
+                        } else {
+                            println!(
+                                "✅ Панель ID {} корректно размещена: {}x{} (повернуто: {})",
+                                node.external_id, actual_width, actual_height, node.is_rotated
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
     /// Улучшенный алгоритм оптимизации (точная копия Java логики)
     pub fn compute_optimal_solution_improved(
         &self,

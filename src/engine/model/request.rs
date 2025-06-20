@@ -110,12 +110,17 @@ impl Panel {
         count: i32,
         material: Option<String>,
     ) -> Self {
+        let material = match material {
+            Some(m) if !m.trim().is_empty() => m,
+            _ => DEFAULT_MATERIAL.to_string(),
+        };
+        
         Self {
             id,
             width,
             height,
             count,
-            material: material.unwrap_or_else(|| DEFAULT_MATERIAL.to_string()),
+            material,
             enabled: true,
             orientation: 0,
             label: None,

@@ -374,10 +374,8 @@ impl MaterialValidation {
                 summary.panels_without_stock);
         }
 
-        if summary.compatible_materials.is_empty() {
-            return Err("Нет совместимых материалов между панелями и складскими панелями".to_string());
-        }
-
+        // Не возвращаем ошибку при отсутствии совместимых материалов,
+        // а возвращаем сводку, которая покажет отсутствие совместимости
         Ok(summary)
     }
 }
