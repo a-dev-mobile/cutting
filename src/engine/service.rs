@@ -501,12 +501,13 @@ impl CutListOptimizerServiceImpl {
         
         // Вычисляем общую площадь панелей для размещения
         let total_tiles_area: i64 = tiles.iter().map(|t| t.get_area()).sum();
+        println!("📊 Общая площадь панелей для размещения: {}", total_tiles_area);
         
-        // Добавляем одиночные складские панели
+        // Добавляем одиночные складские панели (убираем ограничение по площади)
         for stock_tile in stock_tiles {
-            if stock_tile.get_area() >= total_tiles_area / 4 { // Только если панель достаточно большая
-                solutions.push(StockSolution::new(vec![stock_tile.clone()]));
-            }
+            println!("📋 Добавляем стоковое решение: {}x{} (площадь: {})", 
+                stock_tile.width, stock_tile.height, stock_tile.get_area());
+            solutions.push(StockSolution::new(vec![stock_tile.clone()]));
         }
         
         // Добавляем комбинации из нескольких панелей (до 3 для производительности)
@@ -516,10 +517,11 @@ impl CutListOptimizerServiceImpl {
                     let combo = vec![stock_tiles[i].clone(), stock_tiles[j].clone()];
                     let combo_area: i64 = combo.iter().map(|t| t.get_area()).sum();
                     
-                    // Добавляем только если комбинация может вместить хотя бы 30% панелей
-                    if combo_area >= total_tiles_area / 3 {
-                        solutions.push(StockSolution::new(combo));
-                    }
+                    println!("📋 Добавляем комбинированное стоковое решение: {}x{} + {}x{} (общая площадь: {})", 
+                        stock_tiles[i].width, stock_tiles[i].height,
+                        stock_tiles[j].width, stock_tiles[j].height,
+                        combo_area);
+                    solutions.push(StockSolution::new(combo));
                 }
             }
         }
@@ -530,6 +532,7 @@ impl CutListOptimizerServiceImpl {
         // Ограничиваем количество для производительности
         solutions.truncate(50);
         
+        println!("✅ Создано {} стоковых решений", solutions.len());
         solutions
     }
 

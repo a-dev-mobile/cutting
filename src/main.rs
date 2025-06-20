@@ -213,8 +213,8 @@ fn run_optimization(
     
     if verbose {
         println!("📊 Результаты:");
-        println!("  - Размещено панелей: {}", result.panels.len());
-        println!("  - Не поместилось: {}", result.no_fit_panels.len());
+        println!("  - Размещено панелей: {}", result.statistics.placed_panels);
+        println!("  - Не поместилось: {}", result.statistics.unplaced_panels);
         println!("  - Без материала: {}", result.no_material_panels.len());
         println!();
     }

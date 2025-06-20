@@ -2,7 +2,7 @@ use cutting_cli::engine::model::mosaic::Mosaic;
 use cutting_cli::engine::model::tile::TileDimensions;
 
 #[cfg(test)]
-mod mosaic_tests {
+mod stage2_mosaic_tests {
     use super::*;
 
     /// Тест 1: Создание мозаики из стокового листа

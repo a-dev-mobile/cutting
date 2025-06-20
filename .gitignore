@@ -8,3 +8,7 @@
 .vscode/*
 
 makefile
+src/bin/*
+*.json
+**.html
+**.md

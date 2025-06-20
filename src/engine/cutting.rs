@@ -61,7 +61,7 @@ impl CuttingEngine {
         let bottom_node = TileNode::new(
             node.get_x1(),
             node.get_x2(),
-            cut_position,
+            cut_position,  // Узлы позиционируются без учета толщины
             node.get_y2(),
         );
 
@@ -161,19 +161,18 @@ impl CuttingEngine {
             0, // min_trim_dimension - должен приходить из конфигурации
         );
 
-        for candidate_node in candidates {
+        for candidate_node in &candidates {
             // Проверяем точное совпадение
             if candidate_node.get_width() == tile_dimensions.width 
                 && candidate_node.get_height() == tile_dimensions.height {
                 
                 let mut new_mosaic = mosaic.clone();
-                let root_copy = Self::copy_node(&mosaic.get_root_tile_node(), &candidate_node);
+                let mut root_copy = Self::copy_node(&mosaic.get_root_tile_node(), candidate_node);
                 
-                if let Some(target_node) = Self::find_tile_by_id(&root_copy, candidate_node.id) {
-                    let mut target_node_mut = target_node.clone();
-                    target_node_mut.external_id = tile_dimensions.id as i32;
-                    target_node_mut.is_final = true;
-                    target_node_mut.is_rotated = false;
+                if let Some(target_node) = Self::find_tile_by_id_mut(&mut root_copy, candidate_node.id) {
+                    target_node.external_id = tile_dimensions.id as i32;
+                    target_node.is_final = true;
+                    target_node.is_rotated = false;
                 }
                 
                 new_mosaic.set_root_tile_node(root_copy);
@@ -190,7 +189,7 @@ impl CuttingEngine {
                     // Обычное размещение
                     if let Ok(result) = Self::try_place_with_cuts(
                         tile_dimensions,
-                        &candidate_node,
+                        candidate_node,
                         mosaic,
                         cut_thickness,
                         first_cut_orientation,
@@ -203,7 +202,7 @@ impl CuttingEngine {
                     if !tile_dimensions.is_square() {
                         if let Ok(result) = Self::try_place_with_cuts(
                             tile_dimensions,
-                            &candidate_node,
+                            candidate_node,
                             mosaic,
                             cut_thickness,
                             first_cut_orientation,
@@ -217,7 +216,7 @@ impl CuttingEngine {
                     if Self::check_grain_orientation(mosaic, tile_dimensions) {
                         if let Ok(result) = Self::try_place_with_cuts(
                             tile_dimensions,
-                            &candidate_node,
+                            candidate_node,
                             mosaic,
                             cut_thickness,
                             first_cut_orientation,
@@ -226,6 +225,23 @@ impl CuttingEngine {
                             results.push(result);
                         }
                     }
+                }
+            }
+        }
+
+        // Если нет результатов, но есть кандидаты, попробуем принудительное размещение
+        if results.is_empty() && !candidates.is_empty() {
+            for candidate_node in &candidates {
+                if let Ok(result) = Self::try_place_with_cuts(
+                    tile_dimensions,
+                    candidate_node,
+                    mosaic,
+                    cut_thickness,
+                    first_cut_orientation,
+                    false,
+                ) {
+                    results.push(result);
+                    break; // Достаточно одного успешного размещения
                 }
             }
         }

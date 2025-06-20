@@ -62,6 +62,16 @@ impl Cut {
     pub fn get_is_horizontal(&self) -> bool {
         self.is_horizontal
     }
+
+    /// Получить координату разреза
+    pub fn get_cut_coords(&self) -> i32 {
+        self.cut_coord
+    }
+
+    /// Получить координату разреза (альтернативное название)
+    pub fn cut_coord(&self) -> i32 {
+        self.cut_coord
+    }
 }
 
 /// Строитель для создания разрезов
