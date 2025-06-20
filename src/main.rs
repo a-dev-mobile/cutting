@@ -2,9 +2,10 @@ use clap::{Parser, Subcommand};
 use cutting_cli::engine::service::CutListOptimizerService;
 use cutting_cli::engine::logger::CutListLoggerImpl;
 use cutting_cli::engine::model::{
-    CalculationRequest, ClientInfo, Configuration, Panel, PerformanceThresholds
+    CalculationRequest, ClientInfo, Configuration, Panel, PerformanceThresholds, CalculationResponse
 };
 use cutting_cli::error::CuttingError;
+use cutting_cli::visualization::HtmlVisualizer;
 use serde_json;
 use std::sync::Arc;
 use std::time::Duration;
@@ -110,6 +111,17 @@ enum Commands {
         #[arg(short, long, default_value = "example_input.json")]
         output: String,
     },
+    
+    /// Создать HTML визуализацию результатов
+    Visualize {
+        /// Путь к файлу с результатами оптимизации (JSON)
+        #[arg(short, long)]
+        input: String,
+        
+        /// Путь для сохранения HTML файла
+        #[arg(short, long, default_value = "visualization.html")]
+        output: String,
+    },
 }
 
 fn main() {
@@ -164,6 +176,12 @@ fn main() {
         Commands::Example { output } => {
             if let Err(e) = create_example(output) {
                 eprintln!("❌ Ошибка создания примера: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Visualize { input, output } => {
+            if let Err(e) = create_visualization(input, output) {
+                eprintln!("❌ Ошибка создания визуализации: {}", e);
                 std::process::exit(1);
             }
         }
@@ -575,6 +593,37 @@ fn save_result_to_file(result: &cutting_cli::engine::model::CalculationResponse,
     
     fs::write(path, json)
         .map_err(|e| CuttingError::GeneralCuttingError(format!("File write error: {}", e)))?;
+    
+    Ok(())
+}
+
+fn create_visualization(input_path: String, output_path: String) -> Result<(), CuttingError> {
+    println!("🎨 Создание HTML визуализации");
+    println!("=============================");
+    
+    // Загрузка результатов оптимизации
+    if !Path::new(&input_path).exists() {
+        return Err(CuttingError::GeneralCuttingError(format!("File not found: {}", input_path)));
+    }
+    
+    let content = fs::read_to_string(&input_path)
+        .map_err(|e| CuttingError::GeneralCuttingError(format!("File read error: {}", e)))?;
+    
+    let response: CalculationResponse = serde_json::from_str(&content)
+        .map_err(|e| CuttingError::GeneralCuttingError(format!("JSON parse error: {}", e)))?;
+    
+    println!("📊 Данные загружены:");
+    println!("  - Размещено панелей: {}", response.statistics.placed_panels);
+    println!("  - Не поместилось: {}", response.no_fit_panels.len());
+    println!("  - Без материала: {}", response.no_material_panels.len());
+    println!("  - Эффективность: {:.1}%", response.statistics.efficiency_percentage);
+    println!();
+    
+    // Создание HTML визуализации
+    HtmlVisualizer::generate_from_response(&response, &output_path)?;
+    
+    println!("✅ HTML визуализация создана: {}", output_path);
+    println!("💡 Откройте файл в браузере для просмотра результатов");
     
     Ok(())
 }

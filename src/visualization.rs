@@ -1,425 +1,573 @@
-//! Модуль для создания HTML визуализации размещения панелей
-//! 
-//! Этот модуль содержит функции для генерации интерактивной HTML страницы,
-//! которая показывает как панели размещены на листе материала.
+use crate::engine::model::{Solution, CalculationResponse};
+use crate::error::CuttingError;
+use std::fs;
 
-use crate::engine::model::response::{OptimizedPanel, ResponseStatistics};
+/// Генератор HTML визуализации для результатов раскроя
+pub struct HtmlVisualizer;
 
-/// Создает HTML визуализацию размещения панелей
-/// 
-/// # Параметры
-/// * `panels` - Список оптимизированных панелей с их позициями
-/// * `stats` - Статистика оптимизации
-/// * `sheet_width` - Ширина листа материала (по умолчанию 1000)
-/// * `sheet_height` - Высота листа материала (по умолчанию 600)
-/// 
-/// # Возвращает
-/// Строку с HTML кодом для визуализации
-pub fn create_html_visualization(
-    panels: &[OptimizedPanel], 
-    stats: &ResponseStatistics,
-    sheet_width: Option<i32>,
-    sheet_height: Option<i32>
-) -> String {
-    let sheet_w = sheet_width.unwrap_or(1000);
-    let sheet_h = sheet_height.unwrap_or(600);
-    
-    let mut html = String::new();
-    
-    // HTML заголовок и стили
-    html.push_str(&create_html_header());
-    
-    // Статистика
-    html.push_str(&create_stats_section(stats));
-    
-    // Визуализация
-    html.push_str(&create_visualization_section(panels, sheet_w, sheet_h));
-    
-    // Легенда
-    html.push_str(&create_legend_section());
-    
-    // JavaScript для интерактивности
-    html.push_str(&create_javascript_section());
-    
-    // Закрывающие теги
-    html.push_str("</body>\n</html>");
-    
-    html
-}
+impl HtmlVisualizer {
+    /// Создает HTML визуализацию из решения
+    pub fn generate_from_solution(solution: &Solution, output_path: &str) -> Result<(), CuttingError> {
+        let html = Self::create_solution_html(solution);
+        fs::write(output_path, html)
+            .map_err(|e| CuttingError::GeneralCuttingError(format!("Failed to write HTML file: {}", e)))?;
+        Ok(())
+    }
 
-fn create_html_header() -> String {
-    r#"<!DOCTYPE html>
+    /// Создает HTML визуализацию из ответа расчета
+    pub fn generate_from_response(response: &CalculationResponse, output_path: &str) -> Result<(), CuttingError> {
+        let html = Self::create_response_html(response);
+        fs::write(output_path, html)
+            .map_err(|e| CuttingError::GeneralCuttingError(format!("Failed to write HTML file: {}", e)))?;
+        Ok(())
+    }
+
+    /// Создает HTML для решения
+    fn create_solution_html(solution: &Solution) -> String {
+        let mut html = String::new();
+        
+        // HTML заголовок
+        html.push_str(&Self::html_header("Визуализация раскроя"));
+        
+        // Информация о решении
+        html.push_str(&format!(
+            r#"
+            <div class="info-panel">
+                <h2>Информация о решении</h2>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="label">Заготовок:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Размещено деталей:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Не размещено:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Эффективность:</span>
+                        <span class="value">{:.1}%</span>
+                    </div>
+                </div>
+            </div>
+            "#,
+            solution.get_mosaics().len(),
+            solution.get_nbr_final_tiles(),
+            solution.get_no_fit_panels().len(),
+            solution.get_efficiency()
+        ));
+
+        // Визуализация заготовок
+        html.push_str(r#"<div class="visualization-container">"#);
+        
+        for (i, mosaic) in solution.get_mosaics().iter().enumerate() {
+            html.push_str(&Self::create_mosaic_svg(mosaic, i + 1));
+        }
+        
+        html.push_str(r#"</div>"#);
+
+        // Неразмещенные детали
+        if !solution.get_no_fit_panels().is_empty() {
+            html.push_str(&Self::create_unplaced_panels_section(solution.get_no_fit_panels()));
+        }
+
+        // HTML подвал
+        html.push_str(&Self::html_footer());
+        
+        html
+    }
+
+    /// Создает HTML для ответа расчета
+    fn create_response_html(response: &CalculationResponse) -> String {
+        let mut html = String::new();
+        
+        // HTML заголовок
+        html.push_str(&Self::html_header("Результат оптимизации раскроя"));
+        
+        // Информация о результате
+        html.push_str(&format!(
+            r#"
+            <div class="info-panel">
+                <h2>Статистика</h2>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="label">Всего панелей:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Размещено:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Не поместилось:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Без материала:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Эффективность:</span>
+                        <span class="value">{:.1}%</span>
+                    </div>
+                </div>
+            </div>
+            "#,
+            response.statistics.total_panels,
+            response.statistics.placed_panels,
+            response.no_fit_panels.len(),
+            response.no_material_panels.len(),
+            response.statistics.efficiency_percentage
+        ));
+
+        // Группировка панелей по складским панелям
+        let mut stock_panels = std::collections::HashMap::new();
+        for panel in &response.panels {
+            stock_panels.entry(panel.stock_panel_id.clone())
+                .or_insert_with(Vec::new)
+                .push(panel);
+        }
+
+        // Визуализация складских панелей
+        html.push_str(r#"<div class="visualization-container">"#);
+        
+        for (i, (stock_id, panels)) in stock_panels.iter().enumerate() {
+            html.push_str(&Self::create_stock_panel_svg(stock_id, panels, i + 1));
+        }
+        
+        html.push_str(r#"</div>"#);
+
+        // Неразмещенные детали
+        if !response.no_fit_panels.is_empty() || !response.no_material_panels.is_empty() {
+            html.push_str(&Self::create_unplaced_response_panels_section(response));
+        }
+
+        // HTML подвал
+        html.push_str(&Self::html_footer());
+        
+        html
+    }
+
+    /// Создает SVG для мозаики
+    fn create_mosaic_svg(mosaic: &crate::engine::model::Mosaic, index: usize) -> String {
+        let root = mosaic.get_root_tile_node();
+        let width = root.get_width();
+        let height = root.get_height();
+        
+        // Масштабирование для отображения
+        let scale = Self::calculate_scale(width, height, 400, 300);
+        let svg_width = (width as f64 * scale) as i32;
+        let svg_height = (height as f64 * scale) as i32;
+
+        let mut svg = format!(
+            r#"
+            <div class="stock-panel">
+                <h3>Заготовка {} ({}x{} мм)</h3>
+                <svg width="{}" height="{}" viewBox="0 0 {} {}">
+                    <!-- Контур заготовки -->
+                    <rect x="0" y="0" width="{}" height="{}" 
+                          fill="none" stroke="rgb(51,51,51)" stroke-width="2"/>
+            "#,
+            index, width, height,
+            svg_width, svg_height, width, height,
+            width, height
+        );
+
+        // Добавляем размещенные детали
+        let final_nodes = root.get_final_tile_nodes();
+        for (i, node) in final_nodes.iter().enumerate() {
+            let color = Self::get_color(i);
+            svg.push_str(&format!(
+                r#"
+                    <!-- Деталь {} -->
+                    <rect x="{}" y="{}" width="{}" height="{}" 
+                          fill="{}" stroke="rgb(0,0,0)" stroke-width="1" opacity="0.8"/>
+                    <text x="{}" y="{}" font-family="Arial" font-size="12" 
+                          text-anchor="middle" dominant-baseline="middle" fill="rgb(0,0,0)">
+                        ID:{}
+                    </text>
+                "#,
+                i + 1,
+                node.get_x1(), node.get_y1(), 
+                node.get_width(), node.get_height(),
+                color,
+                node.get_x1() + node.get_width() / 2,
+                node.get_y1() + node.get_height() / 2,
+                node.external_id
+            ));
+        }
+
+        svg.push_str(r#"
+                </svg>
+            </div>
+        "#);
+
+        svg
+    }
+
+    /// Создает SVG для складской панели из ответа
+    fn create_stock_panel_svg(stock_id: &str, panels: &[&crate::engine::model::OptimizedPanel], index: usize) -> String {
+        // Определяем размеры складской панели
+        let mut max_x = 0;
+        let mut max_y = 0;
+        
+        for panel in panels {
+            max_x = max_x.max(panel.position.right());
+            max_y = max_y.max(panel.position.bottom());
+        }
+
+        // Если нет панелей, используем размеры по умолчанию
+        if max_x == 0 || max_y == 0 {
+            max_x = 1000;
+            max_y = 600;
+        }
+
+        // Масштабирование для отображения
+        let scale = Self::calculate_scale(max_x, max_y, 400, 300);
+        let svg_width = (max_x as f64 * scale) as i32;
+        let svg_height = (max_y as f64 * scale) as i32;
+
+        let mut svg = format!(
+            r#"
+            <div class="stock-panel">
+                <h3>Заготовка {} - {} ({}x{} мм)</h3>
+                <svg width="{}" height="{}" viewBox="0 0 {} {}">
+                    <!-- Контур заготовки -->
+                    <rect x="0" y="0" width="{}" height="{}" 
+                          fill="none" stroke="rgb(51,51,51)" stroke-width="2"/>
+            "#,
+            index, stock_id, max_x, max_y,
+            svg_width, svg_height, max_x, max_y,
+            max_x, max_y
+        );
+
+        // Добавляем размещенные панели
+        for (i, panel) in panels.iter().enumerate() {
+            let color = Self::get_color(i);
+            svg.push_str(&format!(
+                r#"
+                    <!-- Панель {} -->
+                    <rect x="{}" y="{}" width="{}" height="{}" 
+                          fill="{}" stroke="rgb(0,0,0)" stroke-width="1" opacity="0.8"/>
+                    <text x="{}" y="{}" font-family="Arial" font-size="12" 
+                          text-anchor="middle" dominant-baseline="middle" fill="rgb(0,0,0)">
+                        ID:{}{}
+                    </text>
+                "#,
+                i + 1,
+                panel.position.x, panel.position.y, 
+                panel.position.width, panel.position.height,
+                color,
+                panel.position.x + panel.position.width / 2,
+                panel.position.y + panel.position.height / 2,
+                panel.tile_dimensions.id,
+                if panel.position.rotated { "↻" } else { "" }
+            ));
+        }
+
+        svg.push_str(r#"
+                </svg>
+            </div>
+        "#);
+
+        svg
+    }
+
+    /// Создает секцию неразмещенных панелей для решения
+    fn create_unplaced_panels_section(panels: &[crate::engine::model::TileDimensions]) -> String {
+        let mut html = String::new();
+        
+        html.push_str(r#"
+            <div class="unplaced-section">
+                <h3>Неразмещенные детали</h3>
+                <div class="unplaced-panels">
+        "#);
+
+        for panel in panels {
+            html.push_str(&format!(
+                r#"
+                <div class="unplaced-panel">
+                    <div class="panel-info">
+                        <span class="panel-id">ID: {}</span>
+                        <span class="panel-size">{}x{} мм</span>
+                        <span class="panel-material">{}</span>
+                    </div>
+                </div>
+                "#,
+                panel.id,
+                panel.width, panel.height,
+                panel.material
+            ));
+        }
+
+        html.push_str(r#"
+                </div>
+            </div>
+        "#);
+
+        html
+    }
+
+    /// Создает секцию неразмещенных панелей для ответа
+    fn create_unplaced_response_panels_section(response: &CalculationResponse) -> String {
+        let mut html = String::new();
+        
+        html.push_str(r#"
+            <div class="unplaced-section">
+                <h3>Неразмещенные детали</h3>
+        "#);
+
+        if !response.no_fit_panels.is_empty() {
+            html.push_str(r#"
+                <h4>Не поместились:</h4>
+                <div class="unplaced-panels">
+            "#);
+
+            for panel in &response.no_fit_panels {
+                html.push_str(&format!(
+                    r#"
+                    <div class="unplaced-panel no-fit">
+                        <div class="panel-info">
+                            <span class="panel-id">ID: {}</span>
+                            <span class="panel-size">{}x{} мм</span>
+                            <span class="panel-material">{}</span>
+                        </div>
+                    </div>
+                    "#,
+                    panel.id,
+                    panel.width, panel.height,
+                    panel.material
+                ));
+            }
+
+            html.push_str(r#"</div>"#);
+        }
+
+        if !response.no_material_panels.is_empty() {
+            html.push_str(r#"
+                <h4>Нет подходящего материала:</h4>
+                <div class="unplaced-panels">
+            "#);
+
+            for panel in &response.no_material_panels {
+                html.push_str(&format!(
+                    r#"
+                    <div class="unplaced-panel no-material">
+                        <div class="panel-info">
+                            <span class="panel-id">ID: {}</span>
+                            <span class="panel-size">{}x{} мм</span>
+                            <span class="panel-material">{}</span>
+                        </div>
+                    </div>
+                    "#,
+                    panel.id,
+                    panel.width, panel.height,
+                    panel.material
+                ));
+            }
+
+            html.push_str(r#"</div>"#);
+        }
+
+        html.push_str(r#"</div>"#);
+
+        html
+    }
+
+    /// Вычисляет масштаб для отображения
+    fn calculate_scale(width: i32, height: i32, max_width: i32, max_height: i32) -> f64 {
+        let scale_x = max_width as f64 / width as f64;
+        let scale_y = max_height as f64 / height as f64;
+        scale_x.min(scale_y).min(1.0)
+    }
+
+    /// Получает цвет для детали по индексу
+    fn get_color(index: usize) -> &'static str {
+        const COLORS: &[&str] = &[
+            "rgb(255, 107, 107)", "rgb(78, 205, 196)", "rgb(69, 183, 209)", 
+            "rgb(150, 206, 180)", "rgb(255, 234, 167)", "rgb(221, 160, 221)", 
+            "rgb(152, 216, 200)", "rgb(247, 220, 111)", "rgb(187, 143, 206)", 
+            "rgb(133, 193, 233)", "rgb(248, 196, 113)", "rgb(130, 224, 170)", 
+            "rgb(241, 148, 138)", "rgb(133, 193, 233)", "rgb(215, 189, 226)"
+        ];
+        COLORS[index % COLORS.len()]
+    }
+
+    /// Создает HTML заголовок
+    fn html_header(title: &str) -> String {
+        format!(
+            r#"<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Визуализация размещения панелей</title>
+    <title>{}</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        body {{
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #f5f5f5;
+        }}
+        
+        h1 {{
+            text-align: center;
             color: #333;
-        }
+            margin-bottom: 30px;
+        }}
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: 300;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            padding: 30px;
-            background: #f8f9fa;
-        }
-        
-        .stat-card {
+        .info-panel {{
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            text-align: center;
-        }
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }}
         
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #4facfe;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            color: #666;
-            font-size: 0.9em;
-        }
-        
-        .visualization {
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .sheet {
-            position: relative;
-            border: 3px solid #333;
-            margin: 20px auto;
-            background: #f0f0f0;
-            border-radius: 5px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .panel {
-            position: absolute;
-            border: 2px solid #333;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .panel:hover {
-            transform: scale(1.05);
-            z-index: 10;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        
-        .panel-300x200 { background: linear-gradient(45deg, #ff6b6b, #ee5a52); }
-        .panel-150x100 { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
-        .panel-200x250 { background: linear-gradient(45deg, #45b7d1, #96c93d); }
-        .panel-100x80 { background: linear-gradient(45deg, #f9ca24, #f0932b); }
-        .panel-50x50 { background: linear-gradient(45deg, #eb4d4b, #6c5ce7); }
-        .panel-other { background: linear-gradient(45deg, #a55eea, #26de81); }
-        
-        .legend {
+        .stats {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            margin: 30px 0;
-            padding: 0 30px;
-        }
+        }}
         
-        .legend-item {
+        .stat {{
             display: flex;
-            align-items: center;
-            gap: 10px;
+            justify-content: space-between;
             padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }}
+        
+        .label {{
+            font-weight: bold;
+            color: #666;
+        }}
+        
+        .value {{
+            color: #333;
+            font-weight: bold;
+        }}
+        
+        .visualization-container {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }}
+        
+        .stock-panel {{
             background: white;
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }}
         
-        .legend-color {
-            width: 30px;
-            height: 20px;
-            border-radius: 3px;
-            border: 1px solid #333;
-        }
+        .stock-panel h3 {{
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }}
         
-        .tooltip {
-            position: absolute;
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
+        .stock-panel svg {{
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }}
+        
+        .unplaced-section {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }}
+        
+        .unplaced-section h3 {{
+            color: #d32f2f;
+            margin-top: 0;
+            border-bottom: 2px solid #ffebee;
+            padding-bottom: 10px;
+        }}
+        
+        .unplaced-section h4 {{
+            color: #666;
+            margin-bottom: 15px;
+        }}
+        
+        .unplaced-panels {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }}
+        
+        .unplaced-panel {{
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #d32f2f;
+        }}
+        
+        .unplaced-panel.no-fit {{
+            background: #ffebee;
+            border-left-color: #d32f2f;
+        }}
+        
+        .unplaced-panel.no-material {{
+            background: #fff3e0;
+            border-left-color: #f57c00;
+        }}
+        
+        .panel-info {{
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }}
+        
+        .panel-id {{
+            font-weight: bold;
+            color: #333;
+        }}
+        
+        .panel-size {{
+            color: #666;
+            font-size: 14px;
+        }}
+        
+        .panel-material {{
+            color: #888;
             font-size: 12px;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+        }}
         
-        .efficiency-bar {
-            width: 100%;
-            height: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        
-        .efficiency-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4facfe, #00f2fe);
-            transition: width 1s ease;
-        }
+        @media (max-width: 768px) {{
+            .visualization-container {{
+                grid-template-columns: 1fr;
+            }}
+            
+            .stats {{
+                grid-template-columns: 1fr;
+            }}
+            
+            .unplaced-panels {{
+                grid-template-columns: 1fr;
+            }}
+        }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎨 Визуализация размещения панелей</h1>
-            <p>Интерактивная схема оптимального размещения</p>
-        </div>
-"#.to_string()
-}
-
-fn create_stats_section(stats: &ResponseStatistics) -> String {
-    format!(r#"        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value">{}</div>
-                <div class="stat-label">Размещено панелей</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{:.1}%</div>
-                <div class="stat-label">Эффективность</div>
-                <div class="efficiency-bar">
-                    <div class="efficiency-fill" style="width: {:.1}%"></div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{}</div>
-                <div class="stat-label">Использованная площадь</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{}</div>
-                <div class="stat-label">Потерянная площадь</div>
-            </div>
-        </div>
-"#, 
-        stats.placed_panels,
-        stats.efficiency_percentage,
-        stats.efficiency_percentage,
-        stats.used_area as i32,
-        stats.wasted_area as i32
-    )
-}
-
-fn create_visualization_section(panels: &[OptimizedPanel], sheet_width: i32, sheet_height: i32) -> String {
-    let mut section = format!(r#"        <div class="visualization">
-            <h2>Лист материала {}×{} мм</h2>
-            <div class="sheet" id="sheet" style="width: {}px; height: {}px;">
-"#, 
-        sheet_width, sheet_height,
-        (sheet_width as f64 * 0.8) as i32,  // Масштаб для отображения
-        (sheet_height as f64 * 0.8) as i32
-    );
-    
-    // Вычисляем масштаб для отображения
-    let scale_x = (sheet_width as f64 * 0.8) / sheet_width as f64;
-    let scale_y = (sheet_height as f64 * 0.8) / sheet_height as f64;
-    
-    // Добавляем панели
-    for (i, panel) in panels.iter().enumerate() {
-        let x = (panel.position.x as f64 * scale_x) as i32;
-        let y = (panel.position.y as f64 * scale_y) as i32;
-        let width = (panel.position.width as f64 * scale_x) as i32;
-        let height = (panel.position.height as f64 * scale_y) as i32;
-        
-        let panel_class = get_panel_css_class(panel.tile_dimensions.width, panel.tile_dimensions.height);
-        let panel_text = format!("{}×{}", panel.tile_dimensions.width, panel.tile_dimensions.height);
-        
-        section.push_str(&format!(
-            r#"                <div class="panel {}" 
-                     style="left: {}px; top: {}px; width: {}px; height: {}px;"
-                     data-panel="{}"
-                     data-size="{}×{}"
-                     data-position="({}, {})"
-                     data-area="{}">
-                    {}
-                </div>
+    <h1>{}</h1>
 "#,
-            panel_class, x, y, width, height, i + 1,
-            panel.tile_dimensions.width, panel.tile_dimensions.height,
-            panel.position.x, panel.position.y,
-            panel.position.area(),
-            panel_text
-        ));
+            title, title
+        )
     }
-    
-    section.push_str("            </div>\n");
-    section
-}
 
-fn create_legend_section() -> String {
-    r#"            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color panel-300x200"></div>
-                    <span>Панель 300×200 мм</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color panel-150x100"></div>
-                    <span>Панель 150×100 мм</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color panel-200x250"></div>
-                    <span>Панель 200×250 мм</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color panel-100x80"></div>
-                    <span>Панель 100×80 мм</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color panel-50x50"></div>
-                    <span>Панель 50×50 мм</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color panel-other"></div>
-                    <span>Другие панели</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="tooltip" id="tooltip"></div>
-"#.to_string()
-}
-
-fn create_javascript_section() -> String {
-    r#"    <script>
-        // Интерактивность
-        const panels = document.querySelectorAll('.panel');
-        const tooltip = document.getElementById('tooltip');
-        
-        panels.forEach(panel => {
-            panel.addEventListener('mouseenter', (e) => {
-                const panelNum = e.target.dataset.panel;
-                const size = e.target.dataset.size;
-                const position = e.target.dataset.position;
-                const area = e.target.dataset.area;
-                
-                tooltip.innerHTML = `
-                    <strong>Панель ${panelNum}</strong><br>
-                    Размер: ${size} мм<br>
-                    Позиция: ${position}<br>
-                    Площадь: ${area} мм²
-                `;
-                tooltip.style.opacity = '1';
-            });
-            
-            panel.addEventListener('mouseleave', () => {
-                tooltip.style.opacity = '0';
-            });
-            
-            panel.addEventListener('mousemove', (e) => {
-                tooltip.style.left = e.pageX + 10 + 'px';
-                tooltip.style.top = e.pageY - 10 + 'px';
-            });
-        });
-        
-        // Анимация загрузки
-        setTimeout(() => {
-            panels.forEach((panel, index) => {
-                setTimeout(() => {
-                    panel.style.opacity = '0';
-                    panel.style.transform = 'scale(0)';
-                    setTimeout(() => {
-                        panel.style.opacity = '1';
-                        panel.style.transform = 'scale(1)';
-                        panel.style.transition = 'all 0.5s ease';
-                    }, 50);
-                }, index * 100);
-            });
-        }, 500);
-    </script>
-"#.to_string()
-}
-
-/// Создает JSON данные для экспорта
-pub fn create_json_data(panels: &[OptimizedPanel], stats: &ResponseStatistics) -> String {
-    let mut json = String::from("{\n");
-    json.push_str(&format!("  \"statistics\": {{\n"));
-    json.push_str(&format!("    \"placed_panels\": {},\n", stats.placed_panels));
-    json.push_str(&format!("    \"total_panels\": {},\n", stats.total_panels));
-    json.push_str(&format!("    \"efficiency_percentage\": {:.2},\n", stats.efficiency_percentage));
-    json.push_str(&format!("    \"used_area\": {:.0},\n", stats.used_area));
-    json.push_str(&format!("    \"wasted_area\": {:.0}\n", stats.wasted_area));
-    json.push_str("  },\n");
-    
-    json.push_str("  \"panels\": [\n");
-    for (i, panel) in panels.iter().enumerate() {
-        json.push_str("    {\n");
-        json.push_str(&format!("      \"id\": {},\n", i + 1));
-        json.push_str(&format!("      \"width\": {},\n", panel.tile_dimensions.width));
-        json.push_str(&format!("      \"height\": {},\n", panel.tile_dimensions.height));
-        json.push_str(&format!("      \"x\": {},\n", panel.position.x));
-        json.push_str(&format!("      \"y\": {},\n", panel.position.y));
-        json.push_str(&format!("      \"area\": {},\n", panel.position.area()));
-        json.push_str(&format!("      \"rotated\": {}\n", panel.position.rotated));
-        json.push_str("    }");
-        if i < panels.len() - 1 {
-            json.push_str(",");
-        }
-        json.push_str("\n");
-    }
-    json.push_str("  ]\n");
-    json.push_str("}\n");
-    
-    json
-}
-
-/// Определяет CSS класс для панели на основе её размеров
-fn get_panel_css_class(width: i32, height: i32) -> &'static str {
-    match (width, height) {
-        (300, 200) | (200, 300) => "panel-300x200",
-        (150, 100) | (100, 150) => "panel-150x100",
-        (200, 250) | (250, 200) => "panel-200x250",
-        (100, 80) | (80, 100) => "panel-100x80",
-        (50, 50) => "panel-50x50",
-        _ => "panel-other",
+    /// Создает HTML подвал
+    fn html_footer() -> String {
+        r#"
+</body>
+</html>"#.to_string()
     }
 }

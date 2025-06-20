@@ -276,7 +276,9 @@ impl CutListOptimizerServiceImpl {
         let mut stock_tile_dimensions = Vec::new();
         for stock_panel in &request.stock_panels {
             if stock_panel.is_valid() {
-                if let (Ok(width), Ok(height)) = (stock_panel.width.parse::<i32>(), stock_panel.height.parse::<i32>()) {
+                if let (Ok(width_f64), Ok(height_f64)) = (stock_panel.width.parse::<f64>(), stock_panel.height.parse::<f64>()) {
+                    let width = width_f64 as i32;
+                    let height = height_f64 as i32;
                     println!("📋 Обрабатываем стоковую панель ID {}: {}x{} count={}", stock_panel.id, width, height, stock_panel.count);
                     // Создаем count экземпляров каждой складской панели с уникальными ID
                     for i in 0..stock_panel.count {
@@ -292,7 +294,13 @@ impl CutListOptimizerServiceImpl {
                         println!("  ➕ Создана стоковая плитка ID {}: {}x{}", unique_id, width, height);
                         stock_tile_dimensions.push(tile_dimensions);
                     }
+                } else {
+                    println!("⚠️ Не удалось парсить размеры стоковой панели ID {}: width='{}', height='{}'", 
+                        stock_panel.id, stock_panel.width, stock_panel.height);
                 }
+            } else {
+                println!("⚠️ Стоковая панель ID {} не валидна: enabled={}, count={}", 
+                    stock_panel.id, stock_panel.enabled, stock_panel.count);
             }
         }
         
