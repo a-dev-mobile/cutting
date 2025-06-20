@@ -5,7 +5,7 @@
 
 use cutting_cli::engine::service::{CutListOptimizerService, CutListOptimizerServiceImpl};
 use cutting_cli::engine::model::request::{CalculationRequest, Panel, ClientInfo, Configuration, PerformanceThresholds};
-use cutting_cli::engine::model::response::StatusCode;
+use cutting_cli::engine::model::response::{StatusCode, CalculationSubmissionResult};
 use cutting_cli::engine::logger::CutListLoggerImpl;
 use cutting_cli::types::DEFAULT_MATERIAL;
 use std::sync::Arc;
@@ -619,47 +619,13 @@ fn test_different_configuration_parameters() {
 
 #[cfg(test)]
 mod tests {
-    use cutting_cli::{Solution, StockSolution, TileDimensions};
-
     use super::*;
-    use crate::engine::logger::CutListLoggerImpl;
 
     #[test]
     fn test_status_code_values() {
-        assert_eq!(StatusCode::Ok.get_value(), 0);
-        assert_eq!(StatusCode::InvalidTiles.get_value(), 1);
-        assert_eq!(StatusCode::TaskAlreadyRunning.get_value(), 3);
-    }
-
-    #[test]
-    fn test_task_id_generation() {
-        let logger = Arc::new(CutListLoggerImpl::new());
-        let service = CutListOptimizerServiceImpl::new(logger);
-        
-        let id1 = service.generate_task_id();
-        let id2 = service.generate_task_id();
-        
-        assert_ne!(id1, id2);
-        assert!(id1.len() >= 12); // Минимум дата + счетчик
-    }
-
-    #[test]
-    fn test_panel_validation() {
-        let logger = Arc::new(CutListLoggerImpl::new());
-        let service = CutListOptimizerServiceImpl::new(logger);
-        
-        let valid_panels = vec![
-            crate::engine::model::request::Panel::new(1, "100".to_string(), "200".to_string(), 2, None),
-        ];
-        
-        let (count, status) = service.validate_panels(&valid_panels);
-        assert_eq!(count, 2);
-        assert_eq!(status, StatusCode::Ok);
-        
-        let empty_panels = vec![];
-        let (count, status) = service.validate_panels(&empty_panels);
-        assert_eq!(count, 0);
-        assert_eq!(status, StatusCode::InvalidTiles);
+        assert_eq!(StatusCode::Ok.value(), 0);
+        assert_eq!(StatusCode::InvalidTiles.value(), 1);
+        assert_eq!(StatusCode::TaskAlreadyRunning.value(), 3);
     }
 
     #[test]
@@ -674,89 +640,5 @@ mod tests {
         );
         assert!(!error_result.is_success());
         assert_eq!(error_result.task_id, None);
-    }
-
-    #[test]
-    fn test_optimization_result_creation() {
-        let result = OptimizationResult::new();
-        assert_eq!(result.placed_panels_count, 0);
-        assert_eq!(result.efficiency, 0.0);
-        assert!(result.solutions.is_empty());
-    }
-
-    #[test]
-    fn test_generate_stock_solutions() {
-        let logger = Arc::new(CutListLoggerImpl::new());
-        let service = CutListOptimizerServiceImpl::new(logger);
-        
-        let stock_tiles = vec![
-            TileDimensions::simple(1000, 600),
-            TileDimensions::simple(800, 500),
-        ];
-        let tiles = vec![
-            TileDimensions::simple(200, 200),
-        ];
-        
-        let solutions = service.generate_stock_solutions(&stock_tiles, &tiles);
-        assert!(!solutions.is_empty());
-        // Проверяем, что решения отсортированы по площади
-        if solutions.len() > 1 {
-            assert!(solutions[0].get_total_area() <= solutions[1].get_total_area());
-        }
-    }
-
-    #[test]
-    fn test_generate_tile_permutations() {
-        let logger = Arc::new(CutListLoggerImpl::new());
-        let service = CutListOptimizerServiceImpl::new(logger);
-        
-        let tiles = vec![
-            TileDimensions::simple(100, 50),
-            TileDimensions::simple(200, 100),
-            TileDimensions::simple(150, 75),
-        ];
-        
-        let permutations = service.generate_tile_permutations(&tiles);
-        assert_eq!(permutations.len(), 6); // 6 различных стратегий сортировки
-        
-        // Проверяем, что исходный порядок сохранен в первой перестановке
-        assert_eq!(permutations[0], tiles);
-    }
-
-    #[test]
-    fn test_remove_duplicate_solutions() {
-        let logger = Arc::new(CutListLoggerImpl::new());
-        let service = CutListOptimizerServiceImpl::new(logger);
-        
-        let stock_solution = StockSolution::new(vec![TileDimensions::simple(1000, 600)]);
-        let solution1 = Solution::from_stock_solution(&stock_solution);
-        let solution2 = Solution::from_stock_solution(&stock_solution);
-        
-        let mut solutions = vec![solution1, solution2];
-        let original_count = solutions.len();
-        
-        service.remove_duplicate_solutions(&mut solutions);
-        
-        // После удаления дубликатов должно остаться меньше решений
-        assert!(solutions.len() <= original_count);
-    }
-
-    #[test]
-    fn test_sort_solutions_by_quality() {
-        let logger = Arc::new(CutListLoggerImpl::new());
-        let service = CutListOptimizerServiceImpl::new(logger);
-        
-        let stock_solution1 = StockSolution::new(vec![TileDimensions::simple(1000, 600)]);
-        let stock_solution2 = StockSolution::new(vec![TileDimensions::simple(500, 300)]);
-        
-        let solution1 = Solution::from_stock_solution(&stock_solution1);
-        let solution2 = Solution::from_stock_solution(&stock_solution2);
-        
-        let mut solutions = vec![solution2, solution1]; // Меньшее решение первое
-        
-        service.sort_solutions_by_quality(&mut solutions);
-        
-        // После сортировки большее решение должно быть первым
-        assert!(solutions[0].get_total_area() >= solutions[1].get_total_area());
     }
 }

@@ -38,7 +38,7 @@ impl TileDimensions {
             width: self.height,
             height: self.width,
             material: self.material.clone(),
-            orientation: self.orientation,
+            orientation: if self.is_rotated { 0 } else { 1 },
             label: self.label.clone(),
             is_rotated: !self.is_rotated,
         }

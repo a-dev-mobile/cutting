@@ -132,8 +132,12 @@ pub fn validate_precision(
             max_decimal_places, max_integer_places, max_allowed_digits);
     }
 
-    // Возвращаем коэффициент масштабирования
-    Ok(10_f64.powi(max_decimal_places as i32))
+    // ИСПРАВЛЕНИЕ: Возвращаем правильный коэффициент масштабирования
+    // В Java это было Math.pow(10.0d, maxDecimalPlaces)
+    // где maxDecimalPlaces - это количество десятичных знаков после обработки
+    let scale_factor = 10_f64.powi(max_decimal_places as i32);
+    
+    Ok(scale_factor)
 }
 
 /// Проверяет валидность конфигурации

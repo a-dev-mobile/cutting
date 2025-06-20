@@ -103,7 +103,12 @@ impl PermutationGenerator {
     }
 
     /// Генерация перестановок для групп (строковые ключи)
+
     pub fn generate_all_permutations_groups(&self, groups: &[String]) -> Vec<Vec<String>> {
+        if groups.is_empty() {
+            return vec![vec![]];
+        }
+        
         if groups.len() <= 6 {
             // Для малых наборов используем полную генерацию
             self.generate_permutations_recursive_string(groups.to_vec())
@@ -114,9 +119,13 @@ impl PermutationGenerator {
     }
     
     /// Рекурсивная генерация перестановок для строк
-    fn generate_permutations_recursive_string(&self, mut list: Vec<String>) -> Vec<Vec<String>> {
+   fn generate_permutations_recursive_string(&self, mut list: Vec<String>) -> Vec<Vec<String>> {
         if list.is_empty() {
             return vec![vec![]];
+        }
+        
+        if list.len() == 1 {
+            return vec![list];
         }
         
         let first_element = list.remove(0);
@@ -132,6 +141,7 @@ impl PermutationGenerator {
         
         all_permutations
     }
+
     
     /// Умные стратегии для групп
     fn generate_smart_group_permutations(&self, groups: &[String]) -> Vec<Vec<String>> {

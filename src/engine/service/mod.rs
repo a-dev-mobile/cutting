@@ -19,9 +19,10 @@ mod permutations;
 mod grouping;
 mod validation;
 
-pub use optimization::OptimizationResult;
-pub use permutations::PermutationGenerator;
-pub use grouping::GroupedTileDimensions;
+pub use optimization::*;
+pub use permutations::*;
+pub use grouping::*;
+pub use validation::*;
 
 /// Константы из Java реализации
 pub const MAX_PERMUTATION_ITERATIONS: usize = 1000;
@@ -79,6 +80,7 @@ pub trait CutListOptimizerService {
     fn get_tasks(&self, client_id: &str, status: Option<ServiceTaskStatus>) -> Result<Vec<ServiceTaskInfo>, CuttingError>;
     fn get_stats(&self) -> Result<Stats, CuttingError>;
     fn set_allow_multiple_tasks_per_client(&mut self, allow: bool);
+    fn get_allow_multiple_tasks_per_client(&self) -> bool;
     fn set_cut_list_logger(&mut self, logger: Arc<dyn CutListLogger>);
 }
 
@@ -121,7 +123,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Генерирует уникальный идентификатор задачи
-    fn generate_task_id(&self) -> String {
+    pub fn generate_task_id(&self) -> String {
         let now = Utc::now();
         let date_part = now.format("%Y%m%d%H%M").to_string();
         let counter = self.task_id_counter.fetch_add(1, Ordering::SeqCst);
@@ -129,7 +131,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Проверяет, может ли клиент запустить новую задачу
-    fn can_client_start_task(&self, client_id: &str, max_tasks: usize) -> bool {
+    pub fn can_client_start_task(&self, client_id: &str, max_tasks: usize) -> bool {
         if let Ok(client_tasks) = self.client_tasks.lock() {
             if let Some(tasks) = client_tasks.get(client_id) {
                 return tasks.len() < max_tasks;
@@ -139,7 +141,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Добавляет задачу к клиенту
-    fn add_task_to_client(&self, client_id: &str, task_id: &str) {
+    pub fn add_task_to_client(&self, client_id: &str, task_id: &str) {
         if let Ok(mut client_tasks) = self.client_tasks.lock() {
             client_tasks
                 .entry(client_id.to_string())
@@ -601,6 +603,10 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
             "Множественные задачи на клиента: {}",
             if allow { "разрешены" } else { "запрещены" }
         ));
+    }
+
+    fn get_allow_multiple_tasks_per_client(&self) -> bool {
+        self.allow_multiple_tasks_per_client
     }
 
     fn set_cut_list_logger(&mut self, logger: Arc<dyn CutListLogger>) {

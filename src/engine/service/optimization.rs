@@ -165,80 +165,91 @@ impl CutListOptimizerServiceImpl {
         stock_tiles: &[TileDimensions],
     ) -> Result<OptimizationResult, CuttingError> {
         println!("🔧 Запуск улучшенного алгоритма оптимизации");
-
+        
+        // Проверяем входные данные
+        if tiles.is_empty() {
+            println!("❌ Нет панелей для размещения");
+            return Ok(OptimizationResult::new());
+        }
+        
+        if stock_tiles.is_empty() {
+            println!("❌ Нет складских панелей");
+            return Ok(OptimizationResult::new());
+        }
+        
         // Группируем панели как в Java
         let grouped_tiles = self.generate_groups(tiles);
         let distinct_groups = self.get_distinct_grouped_tile_dimensions(&grouped_tiles);
-
-        println!(
-            "📊 Создано {} групп из {} панелей",
-            distinct_groups.len(),
-            tiles.len()
-        );
-
+        
+        println!("📊 Создано {} групп из {} панелей", distinct_groups.len(), tiles.len());
+        
         // Генерируем перестановки групп
         let group_keys: Vec<_> = distinct_groups.keys().cloned().collect();
+        
+        // ИСПРАВЛЕНИЕ: Проверяем пустой список групп
+        if group_keys.is_empty() {
+            println!("⚠️ Нет групп для обработки");
+            return Ok(OptimizationResult::new());
+        }
+        
         let permutations = if group_keys.len() <= 7 {
-            self.permutation_generator
-                .generate_all_permutations_groups(&group_keys)
+            self.permutation_generator.generate_all_permutations_groups(&group_keys)
         } else {
             let mut limited_keys = group_keys[..7].to_vec();
             let remaining_keys = group_keys[7..].to_vec();
-
-            let base_permutations = self
-                .permutation_generator
-                .generate_all_permutations_groups(&limited_keys);
-            base_permutations
-                .into_iter()
-                .map(|mut perm| {
-                    perm.extend(remaining_keys.clone());
-                    perm
-                })
-                .collect()
+            
+            let base_permutations = self.permutation_generator.generate_all_permutations_groups(&limited_keys);
+            base_permutations.into_iter().map(|mut perm| {
+                perm.extend(remaining_keys.clone());
+                perm
+            }).collect()
         };
-
+        
         println!("🔀 Создано {} перестановок групп", permutations.len());
-
-        // Конвертируем перестановки групп обратно в перестановки панелей
-        let tile_permutations: Vec<Vec<TileDimensions>> = permutations
-            .iter()
-            .map(|group_perm| self.groups_to_tiles(group_perm, &grouped_tiles, &distinct_groups))
-            .collect();
-
+        
+        // ИСПРАВЛЕНИЕ: Проверяем пустой список перестановок
+        if permutations.is_empty() {
+            println!("⚠️ Нет перестановок для обработки");
+            return Ok(OptimizationResult::new());
+        }
+        
+        // Сохраняем количество перестановок перед перемещением
         let original_permutations_count = permutations.len();
-
+        
+        // Конвертируем перестановки групп обратно в перестановки панелей
+        let tile_permutations: Vec<Vec<TileDimensions>> = permutations.into_iter()
+            .map(|group_perm| self.groups_to_tiles(&group_perm, &grouped_tiles, &distinct_groups))
+            .collect();
+        
         // Удаляем дубликаты перестановок
         let unique_permutations = self.remove_duplicate_permutations(tile_permutations);
-        println!(
-            "✅ Осталось {} уникальных перестановок из {} исходных",
-            unique_permutations.len(),
-            original_permutations_count
-        );
-
+        println!("✅ Осталось {} уникальных перестановок из {} исходных", 
+            unique_permutations.len(), original_permutations_count);
+        
+        // ИСПРАВЛЕНИЕ: Проверяем пустой список уникальных перестановок
+        if unique_permutations.is_empty() {
+            println!("⚠️ Нет уникальных перестановок для обработки");
+            return Ok(OptimizationResult::new());
+        }
+        
         // Генерируем стоковые решения
         let stock_solutions = self.generate_stock_solutions_improved(stock_tiles, tiles);
-
+        
+        // ИСПРАВЛЕНИЕ: Проверяем пустой список стоковых решений
+        if stock_solutions.is_empty() {
+            println!("⚠️ Нет стоковых решений для обработки");
+            return Ok(OptimizationResult::new());
+        }
+        
         let mut best_solutions = Vec::new();
         let mut best_placed_count = 0;
         let mut best_efficiency = 0.0;
-
+        
         // Основной цикл оптимизации (как в Java)
-        for (stock_idx, stock_solution) in stock_solutions
-            .iter()
-            .enumerate()
-            .take(MAX_STOCK_ITERATIONS)
-        {
-            println!(
-                "📋 Стоковое решение {}/{}",
-                stock_idx + 1,
-                stock_solutions.len()
-            );
-
-            for (perm_idx, permutation) in unique_permutations
-                .iter()
-                .enumerate()
-                .take(MAX_PERMUTATION_ITERATIONS)
-            {
+        for (stock_idx, stock_solution) in stock_solutions.iter().enumerate().take(MAX_STOCK_ITERATIONS) {
+            println!("📋 Стоковое решение {}/{}", stock_idx + 1, stock_solutions.len());
+            
+            for (perm_idx, permutation) in unique_permutations.iter().enumerate().take(MAX_PERMUTATION_ITERATIONS) {
                 if perm_idx % 10 == 0 {
                     println!(
                         "🔄 Перестановка {}/{}",
@@ -246,24 +257,18 @@ impl CutListOptimizerServiceImpl {
                         unique_permutations.len().min(MAX_PERMUTATION_ITERATIONS)
                     );
                 }
-
+                
                 match self.compute_solutions_for_permutation_improved(permutation, stock_solution) {
                     Ok(solutions) => {
                         if let Some(best_solution) = solutions.first() {
                             let placed_count = best_solution.get_nbr_final_tiles() as usize;
                             let efficiency = best_solution.get_efficiency();
-
-                            if placed_count > best_placed_count
-                                || (placed_count == best_placed_count
-                                    && efficiency > best_efficiency)
-                            {
-                                println!(
-                                    "🎉 Новое лучшее решение: {}/{} панелей, {:.2}% эффективность",
-                                    placed_count,
-                                    tiles.len(),
-                                    efficiency
-                                );
-
+                            
+                            if placed_count > best_placed_count || 
+                               (placed_count == best_placed_count && efficiency > best_efficiency) {
+                                println!("🎉 Новое лучшее решение: {}/{} панелей, {:.2}% эффективность", 
+                                    placed_count, tiles.len(), efficiency);
+                                
                                 best_solutions = solutions;
                                 best_placed_count = placed_count;
                                 best_efficiency = efficiency;
@@ -271,8 +276,7 @@ impl CutListOptimizerServiceImpl {
                         }
                     }
                     Err(e) => {
-                        self.cut_list_logger
-                            .warning(&format!("Ошибка обработки перестановки: {}", e));
+                        self.cut_list_logger.warning(&format!("Ошибка обработки перестановки: {}", e));
                     }
                 }
 
@@ -291,19 +295,10 @@ impl CutListOptimizerServiceImpl {
         Ok(OptimizationResult {
             solutions: best_solutions.clone(),
             placed_panels_count: best_placed_count,
-            total_area: best_solutions
-                .first()
-                .map(|s| s.get_total_area() as f64)
-                .unwrap_or(0.0),
-            used_area: best_solutions
-                .first()
-                .map(|s| s.get_used_area() as f64)
-                .unwrap_or(0.0),
+            total_area: best_solutions.first().map(|s| s.get_total_area() as f64).unwrap_or(0.0),
+            used_area: best_solutions.first().map(|s| s.get_used_area() as f64).unwrap_or(0.0),
             efficiency: best_efficiency,
-            cuts_count: best_solutions
-                .first()
-                .map(|s| s.get_cuts_count() as usize)
-                .unwrap_or(0),
+            cuts_count: best_solutions.first().map(|s| s.get_cuts_count() as usize).unwrap_or(0),
         })
     }
 
@@ -392,6 +387,10 @@ impl CutListOptimizerServiceImpl {
 
     /// Группировка идентичных панелей (как в Java generateGroups)
     pub fn generate_groups(&self, tiles: &[TileDimensions]) -> Vec<GroupedTileDimensions> {
+        if tiles.is_empty() {
+            return Vec::new();
+        }
+        
         let mut panel_counts = HashMap::new();
         for tile in tiles {
             let key = format!("{}x{}", tile.width, tile.height);
@@ -405,12 +404,23 @@ impl CutListOptimizerServiceImpl {
             let key = format!("{}x{}", tile.width, tile.height);
             let total_count = panel_counts[&key];
             let current_count = group_counter.entry(key.clone()).or_insert(0);
-
-            let max_group_size = std::cmp::max(total_count / 100, 1);
-
-            let group_id = if total_count > max_group_size && *current_count > total_count / 4 {
-                *current_count = 0;
-                (*current_count / (total_count / 4)) as i32
+            
+            // ИСПРАВЛЕНИЕ: Предотвращаем деление на ноль
+            let max_group_size = if total_count > 100 {
+                std::cmp::max(total_count / 100, 1)
+            } else {
+                total_count // Для малых количеств используем все в одной группе
+            };
+            
+            let group_id = if total_count > max_group_size && *current_count > 0 {
+                // ИСПРАВЛЕНИЕ: Предотвращаем деление на ноль
+                let quarter_size = std::cmp::max(total_count / 4, 1);
+                if *current_count > quarter_size {
+                    *current_count = 0;
+                    (*current_count / quarter_size) as i32
+                } else {
+                    0
+                }
             } else {
                 0
             };
@@ -550,15 +560,9 @@ impl CutListOptimizerServiceImpl {
     ) -> HashMap<String, (TileDimensions, i32)> {
         let mut distinct = HashMap::new();
         for grouped_tile in grouped_tiles {
-            let key = format!(
-                "{}x{}_g{}",
-                grouped_tile.tile.width, grouped_tile.tile.height, grouped_tile.group_id
-            );
-            let count = distinct
-                .entry(key.clone())
-                .or_insert((grouped_tile.tile.clone(), 0))
-                .1;
-            distinct.insert(key, (grouped_tile.tile.clone(), count + 1));
+            let key = format!("{}x{}_g{}", grouped_tile.tile.width, grouped_tile.tile.height, grouped_tile.group_id);
+            let current_count = distinct.entry(key.clone()).or_insert((grouped_tile.tile.clone(), 0)).1;
+            distinct.insert(key, (grouped_tile.tile.clone(), current_count + 1));
         }
         distinct
     }
