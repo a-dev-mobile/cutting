@@ -87,41 +87,8 @@ impl HtmlVisualizer {
         // HTML заголовок
         html.push_str(&Self::html_header("Результат оптимизации раскроя"));
         
-        // Информация о результате
-        html.push_str(&format!(
-            r#"
-            <div class="info-panel">
-                <h2>Статистика</h2>
-                <div class="stats">
-                    <div class="stat">
-                        <span class="label">Всего панелей:</span>
-                        <span class="value">{}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">Размещено:</span>
-                        <span class="value">{}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">Не поместилось:</span>
-                        <span class="value">{}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">Без материала:</span>
-                        <span class="value">{}</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">Эффективность:</span>
-                        <span class="value">{:.1}%</span>
-                    </div>
-                </div>
-            </div>
-            "#,
-            response.statistics.total_panels,
-            response.statistics.placed_panels,
-            response.no_fit_panels.len(),
-            response.no_material_panels.len(),
-            response.statistics.efficiency_percentage
-        ));
+        // Глобальная статистика
+        html.push_str(&Self::create_global_statistics(response));
 
         // Группировка панелей по складским панелям
         let mut stock_panels = std::collections::HashMap::new();
@@ -135,7 +102,7 @@ impl HtmlVisualizer {
         html.push_str(r#"<div class="visualization-container">"#);
         
         for (i, (stock_id, panels)) in stock_panels.iter().enumerate() {
-            html.push_str(&Self::create_stock_panel_svg(stock_id, panels, i + 1));
+            html.push_str(&Self::create_enhanced_stock_panel_svg(stock_id, panels, i + 1, response));
         }
         
         html.push_str(r#"</div>"#);
@@ -542,6 +509,61 @@ impl HtmlVisualizer {
             font-size: 12px;
         }}
         
+        .panel-stats {{
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }}
+        
+        .stock-stats {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }}
+        
+        .stock-stat {{
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }}
+        
+        .stock-stat h4 {{
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 16px;
+        }}
+        
+        .stock-details {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }}
+        
+        .detail {{
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            font-size: 13px;
+        }}
+        
+        .detail .label {{
+            font-weight: bold;
+            color: #666;
+        }}
+        
+        .detail .value {{
+            color: #333;
+            font-weight: bold;
+        }}
+        
         @media (max-width: 768px) {{
             .visualization-container {{
                 grid-template-columns: 1fr;
@@ -553,6 +575,19 @@ impl HtmlVisualizer {
             
             .unplaced-panels {{
                 grid-template-columns: 1fr;
+            }}
+            
+            .stock-stats {{
+                grid-template-columns: 1fr;
+            }}
+            
+            .stock-details {{
+                grid-template-columns: 1fr;
+            }}
+            
+            .panel-stats {{
+                flex-direction: column;
+                gap: 5px;
             }}
         }}
     </style>
@@ -569,5 +604,296 @@ impl HtmlVisualizer {
         r#"
 </body>
 </html>"#.to_string()
+    }
+
+    /// Создает глобальную статистику
+    fn create_global_statistics(response: &CalculationResponse) -> String {
+        // Группировка панелей по складским панелям для подсчета статистики
+        let mut stock_panels = std::collections::HashMap::new();
+        for panel in &response.panels {
+            stock_panels.entry(panel.stock_panel_id.clone())
+                .or_insert_with(Vec::new)
+                .push(panel);
+        }
+
+        // Подсчет статистики по складским панелям
+        let mut stock_stats = Vec::new();
+        let mut total_cuts = 0;
+        let mut total_cut_length = 0;
+
+        for (stock_id, panels) in &stock_panels {
+            let mut max_x = 0;
+            let mut max_y = 0;
+            let mut used_area = 0;
+            
+            for panel in panels {
+                max_x = max_x.max(panel.position.right());
+                max_y = max_y.max(panel.position.bottom());
+                used_area += panel.position.width * panel.position.height;
+            }
+
+            let total_area = max_x * max_y;
+            let wasted_area = total_area - used_area;
+            let efficiency = if total_area > 0 { (used_area as f64 / total_area as f64) * 100.0 } else { 0.0 };
+            
+            // Примерный подсчет резов (количество панелей * 2 для упрощения)
+            let cuts = panels.len() * 2;
+            let cut_length = (max_x + max_y) * panels.len() as i32;
+            
+            total_cuts += cuts;
+            total_cut_length += cut_length;
+
+            stock_stats.push((stock_id.clone(), max_x, max_y, used_area, wasted_area, efficiency, panels.len(), cuts, cut_length));
+        }
+
+        let mut html = format!(
+            r#"
+            <div class="info-panel">
+                <h2>Глобальная статистика</h2>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="label">Всего панелей:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Размещено:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Не поместилось:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Без материала:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Эффективность:</span>
+                        <span class="value">{:.1}%</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Использовано заготовок:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Общая площадь:</span>
+                        <span class="value">{:.0} мм²</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Использованная площадь:</span>
+                        <span class="value">{:.0} мм²</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Потери:</span>
+                        <span class="value">{:.0} мм²</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Всего резов:</span>
+                        <span class="value">{}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Общая длина резов:</span>
+                        <span class="value">{} мм</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Время расчета:</span>
+                        <span class="value">{} мс</span>
+                    </div>
+                </div>
+            </div>
+            "#,
+            response.statistics.total_panels,
+            response.statistics.placed_panels,
+            response.no_fit_panels.len(),
+            response.no_material_panels.len(),
+            response.statistics.efficiency_percentage,
+            stock_panels.len(),
+            response.statistics.total_area,
+            response.statistics.used_area,
+            response.statistics.wasted_area,
+            total_cuts,
+            total_cut_length,
+            response.statistics.calculation_time_ms
+        );
+
+        // Добавляем статистику по каждой заготовке
+        if !stock_stats.is_empty() {
+            html.push_str(r#"
+            <div class="info-panel">
+                <h2>Статистика по заготовкам</h2>
+                <div class="stock-stats">
+            "#);
+
+            for (i, (stock_id, width, height, used_area, wasted_area, efficiency, panel_count, cuts, cut_length)) in stock_stats.iter().enumerate() {
+                html.push_str(&format!(
+                    r#"
+                    <div class="stock-stat">
+                        <h4>Заготовка {} - {}</h4>
+                        <div class="stock-details">
+                            <div class="detail">
+                                <span class="label">Размер:</span>
+                                <span class="value">{}×{} мм</span>
+                            </div>
+                            <div class="detail">
+                                <span class="label">Использованная площадь:</span>
+                                <span class="value">{} мм² ({:.1}%)</span>
+                            </div>
+                            <div class="detail">
+                                <span class="label">Потери:</span>
+                                <span class="value">{} мм² ({:.1}%)</span>
+                            </div>
+                            <div class="detail">
+                                <span class="label">Панелей:</span>
+                                <span class="value">{}</span>
+                            </div>
+                            <div class="detail">
+                                <span class="label">Резов:</span>
+                                <span class="value">{}</span>
+                            </div>
+                            <div class="detail">
+                                <span class="label">Длина резов:</span>
+                                <span class="value">{} мм</span>
+                            </div>
+                        </div>
+                    </div>
+                    "#,
+                    i + 1, stock_id,
+                    width, height,
+                    used_area, efficiency,
+                    wasted_area, 100.0 - efficiency,
+                    panel_count,
+                    cuts,
+                    cut_length
+                ));
+            }
+
+            html.push_str(r#"
+                </div>
+            </div>
+            "#);
+        }
+
+        html
+    }
+
+    /// Создает улучшенный SVG для складской панели с размерами
+    fn create_enhanced_stock_panel_svg(stock_id: &str, panels: &[&crate::engine::model::OptimizedPanel], index: usize, response: &CalculationResponse) -> String {
+        // Определяем размеры складской панели
+        let mut max_x = 0;
+        let mut max_y = 0;
+        
+        for panel in panels {
+            max_x = max_x.max(panel.position.right());
+            max_y = max_y.max(panel.position.bottom());
+        }
+
+        // Если нет панелей, используем размеры по умолчанию
+        if max_x == 0 || max_y == 0 {
+            max_x = 1000;
+            max_y = 600;
+        }
+
+        // Подсчет статистики для этой заготовки
+        let mut used_area = 0;
+        for panel in panels {
+            used_area += panel.position.width * panel.position.height;
+        }
+        let total_area = max_x * max_y;
+        let wasted_area = total_area - used_area;
+        let efficiency = if total_area > 0 { (used_area as f64 / total_area as f64) * 100.0 } else { 0.0 };
+
+        // Масштабирование для отображения
+        let scale = Self::calculate_scale(max_x, max_y, 500, 400);
+        let svg_width = (max_x as f64 * scale) as i32;
+        let svg_height = (max_y as f64 * scale) as i32;
+
+        let mut svg = format!(
+            r#"
+            <div class="stock-panel">
+                <h3>Заготовка {} - {} ({}×{} мм)</h3>
+                <div class="panel-stats">
+                    <span>Использовано: {} мм² ({:.1}%)</span>
+                    <span>Потери: {} мм² ({:.1}%)</span>
+                    <span>Панелей: {}</span>
+                </div>
+                <svg width="{}" height="{}" viewBox="0 0 {} {}">
+                    <!-- Контур заготовки -->
+                    <rect x="0" y="0" width="{}" height="{}" 
+                          fill="none" stroke="rgb(51,51,51)" stroke-width="3"/>
+                    
+                    <!-- Размеры заготовки -->
+                    <text x="{}" y="-5" font-family="Arial" font-size="14" font-weight="bold"
+                          text-anchor="middle" fill="rgb(51,51,51)">
+                        {} мм
+                    </text>
+                    <text x="-15" y="{}" font-family="Arial" font-size="14" font-weight="bold"
+                          text-anchor="middle" fill="rgb(51,51,51)" transform="rotate(-90, -15, {})">
+                        {} мм
+                    </text>
+            "#,
+            index, stock_id, max_x, max_y,
+            used_area, efficiency,
+            wasted_area, 100.0 - efficiency,
+            panels.len(),
+            svg_width, svg_height, max_x, max_y,
+            max_x, max_y,
+            max_x / 2, max_x,
+            max_y / 2, max_y / 2, max_y
+        );
+
+        // Добавляем размещенные панели с размерами
+        for (i, panel) in panels.iter().enumerate() {
+            let color = Self::get_color(i);
+            let center_x = panel.position.x + panel.position.width / 2;
+            let center_y = panel.position.y + panel.position.height / 2;
+            
+            // Определяем размер шрифта в зависимости от размера панели
+            let font_size = if panel.position.width < 80 || panel.position.height < 40 { 8 } else { 10 };
+            
+            svg.push_str(&format!(
+                r#"
+                    <!-- Панель {} -->
+                    <rect x="{}" y="{}" width="{}" height="{}" 
+                          fill="{}" stroke="rgb(0,0,0)" stroke-width="1" opacity="0.8"/>
+                    
+                    <!-- ID панели в центре -->
+                    <text x="{}" y="{}" font-family="Arial" font-size="{}" font-weight="bold"
+                          text-anchor="middle" dominant-baseline="middle" fill="rgb(0,0,0)">
+                        ID:{}{}
+                    </text>
+                    
+                    <!-- Размеры по краям панели -->
+                    <text x="{}" y="{}" font-family="Arial" font-size="{}" 
+                          text-anchor="middle" fill="rgb(0,0,0)">
+                        {}
+                    </text>
+                    <text x="{}" y="{}" font-family="Arial" font-size="{}" 
+                          text-anchor="middle" fill="rgb(0,0,0)" transform="rotate(-90, {}, {})">
+                        {}
+                    </text>
+                "#,
+                i + 1,
+                panel.position.x, panel.position.y, 
+                panel.position.width, panel.position.height,
+                color,
+                center_x, center_y, font_size,
+                panel.tile_dimensions.id,
+                if panel.position.rotated { "↻" } else { "" },
+                // Ширина сверху
+                center_x, panel.position.y + 12, font_size - 2,
+                panel.position.width,
+                // Высота слева
+                panel.position.x + 12, center_y, font_size - 2,
+                panel.position.x + 12, center_y,
+                panel.position.height
+            ));
+        }
+
+        svg.push_str(r#"
+                </svg>
+            </div>
+        "#);
+
+        svg
     }
 }

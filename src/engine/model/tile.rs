@@ -90,21 +90,8 @@ impl TileDimensions {
             is_rotated: false,
         }
     }
-    /// Проверяет, помещается ли другая плитка в эту
-    pub fn fits(&self, other: &TileDimensions) -> bool {
-        (self.width >= other.width && self.height >= other.height)
-            || (!other.is_square() && self.width >= other.height && self.height >= other.width)
-    }
 
-    /// Поворачивает плитку на 90 градусов
-    pub fn rotate90(&self) -> Self {
-        let mut rotated = self.clone();
-        rotated.width = self.height;
-        rotated.height = self.width;
-        rotated.is_rotated = !self.is_rotated;
-        rotated.orientation = if self.orientation == 0 { 1 } else { 0 };
-        rotated
-    }
+
     /// Создать новые размеры с полными параметрами включая поворот
     pub fn new_with_rotation(
         id: i32,
@@ -139,20 +126,6 @@ impl TileDimensions {
         }
     }
 
-    /// Получить максимальное измерение
-    pub fn get_max_dimension(&self) -> i32 {
-        self.width.max(self.height)
-    }
-
-    /// Получить площадь
-    pub fn get_area(&self) -> i64 {
-        (self.width as i64) * (self.height as i64)
-    }
-
-    /// Проверить, является ли квадратом
-    pub fn is_square(&self) -> bool {
-        self.width == self.height
-    }
 
     /// Проверить, является ли горизонтальной
     pub fn is_horizontal(&self) -> bool {
@@ -170,10 +143,7 @@ impl TileDimensions {
         format!("{}x{}", self.width, self.height)
     }
 
-    /// Хеш-код на основе размеров
-    pub fn dimensions_based_hash_code(&self) -> i32 {
-        self.width * 31 + self.height
-    }
+
 }
 
 impl std::fmt::Display for TileDimensions {

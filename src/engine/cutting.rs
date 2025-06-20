@@ -37,7 +37,7 @@ impl CuttingEngine {
     pub fn split_horizontally(
         node: &TileNode,
         cut_position: i32,
-        cut_thickness: i32,
+        _cut_thickness: i32,
     ) -> Result<CutResult, CuttingError> {
         // Проверяем валидность разреза
         if cut_position <= node.get_y1() || cut_position >= node.get_y2() {
@@ -91,7 +91,7 @@ impl CuttingEngine {
     pub fn split_vertically(
         node: &TileNode,
         cut_position: i32,
-        cut_thickness: i32,
+        _cut_thickness: i32,
     ) -> Result<CutResult, CuttingError> {
         // Проверяем валидность разреза
         if cut_position <= node.get_x1() || cut_position >= node.get_x2() {
