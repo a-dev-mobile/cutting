@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use cutlist_optimizer_cli::models::{Solution, TileDimensions, Mosaic, Orientation};
-    use cutlist_optimizer_cli::engine::stock::StockSolution;
 
     fn create_test_tile_dimensions() -> TileDimensions {
         TileDimensions {
