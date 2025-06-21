@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::engine::comparator::OptimizationPriority;
+use crate::models::performance_thresholds::PerformanceThresholds;
 
 /// Configuration parameters for the optimization process
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,16 +28,4 @@ pub struct Configuration {
     
     /// Performance constraints
     pub performance_thresholds: PerformanceThresholds,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PerformanceThresholds {
-    /// Maximum number of simultaneous tasks
-    pub max_simultaneous_tasks: usize,
-    
-    /// Maximum number of threads per task
-    pub max_simultaneous_threads: usize,
-    
-    /// Interval between thread status checks (milliseconds)
-    pub thread_check_interval: u64,
 }

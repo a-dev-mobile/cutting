@@ -3,4 +3,4 @@ pub mod structs;
 pub mod impls;
 
 
-pub use structs::{Configuration, PerformanceThresholds};
+pub use structs::Configuration;

@@ -1,6 +1,7 @@
-use super::structs::{Configuration, PerformanceThresholds};
+use super::structs::Configuration;
 use crate::engine::comparator::OptimizationPriority;
 use crate::error::{OptimizerError, Result};
+use crate::models::performance_thresholds::PerformanceThresholds;
 
 impl Default for Configuration {
     fn default() -> Self {
@@ -17,15 +18,6 @@ impl Default for Configuration {
     }
 }
 
-impl Default for PerformanceThresholds {
-    fn default() -> Self {
-        Self {
-            max_simultaneous_tasks: 10,
-            max_simultaneous_threads: num_cpus::get(),
-            thread_check_interval: 1000,
-        }
-    }
-}
 
 impl Configuration {
     /// Validate configuration parameters
