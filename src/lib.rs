@@ -15,6 +15,7 @@
 // Внутренние модули
 pub mod cli;
 pub mod comparator;
+pub mod logging;
 pub mod stock;
 
 pub mod error;

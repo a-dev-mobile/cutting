@@ -1,19 +1,19 @@
 use anyhow::Result;
 use clap::Parser;
-use tracing_subscriber::{filter::EnvFilter, fmt, prelude::*};
 
 // Используем библиотеку вместо объявления модулей
-use cutlist_optimizer_cli::cli::args::Cli;
+use cutlist_optimizer_cli::{cli::args::Cli, logging};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::registry()
-        .with(fmt::layer())
-        .with(EnvFilter::from_default_env())
-        .init();
-
     let cli = Cli::parse();
+    
+    // Initialize logging with verbose flag from CLI
+    if let Err(e) = logging::init_cli(cli.verbose) {
+        eprintln!("Ошибка инициализации логирования: {}", e);
+        std::process::exit(1);
+    }
+
     cli.execute().await?;
 
     Ok(())
