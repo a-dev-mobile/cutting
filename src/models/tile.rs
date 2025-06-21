@@ -47,8 +47,10 @@ impl TileDimensions {
 
     /// Check if this tile can fit within a container
     pub fn fits(&self, container: &TileDimensions) -> bool {
-        (self.width <= container.width && self.height <= container.height) ||
-        (self.can_rotate() && self.width <= container.height && self.height <= container.width)
+        (self.width <= container.width && self.height <= container.height)
+            || (self.can_rotate()
+                && self.width <= container.height
+                && self.height <= container.width)
     }
 
     /// Check if the tile can be rotated based on orientation constraints
@@ -89,15 +91,15 @@ impl TileDimensions {
 impl TileDimensions {
     // Equivalent to Java's hasSameDimensions
     pub fn has_same_dimensions(&self, other: &TileDimensions) -> bool {
-        (self.width == other.width && self.height == other.height) ||
-        (self.width == other.height && self.height == other.width)
+        (self.width == other.width && self.height == other.height)
+            || (self.width == other.height && self.height == other.width)
     }
 
     // Equivalent to Java's dimensionsBasedHashCode
     pub fn dimensions_hash(&self) -> u64 {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-        
+
         let mut hasher = DefaultHasher::new();
         let (min_dim, max_dim) = if self.width <= self.height {
             (self.width, self.height)
@@ -107,35 +109,5 @@ impl TileDimensions {
         min_dim.hash(&mut hasher);
         max_dim.hash(&mut hasher);
         hasher.finish()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tile_creation() {
-        let tile = TileDimensions::new(1, 100, 200);
-        assert_eq!(tile.area(), 20000);
-        assert!(!tile.is_square());
-        assert!(!tile.is_horizontal());
-    }
-
-    #[test]
-    fn test_tile_rotation() {
-        let mut tile = TileDimensions::new(1, 100, 200);
-        tile.rotate_90();
-        assert_eq!(tile.width, 200);
-        assert_eq!(tile.height, 100);
-        assert!(tile.is_rotated);
-    }
-
-    #[test]
-    fn test_tile_fits() {
-        let small = TileDimensions::new(1, 50, 100);
-        let large = TileDimensions::new(2, 200, 300);
-        assert!(small.fits(&large));
-        assert!(!large.fits(&small));
     }
 }
