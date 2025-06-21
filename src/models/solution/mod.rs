@@ -1,4 +1,5 @@
 pub mod structs;
-pub mod impls;
+pub mod analysis_impls;
+pub mod core_impls;
 
 pub use structs::Solution;
