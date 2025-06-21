@@ -65,6 +65,16 @@ pub enum OptimizerError {
         from: crate::models::enums::Status,
         to: crate::models::enums::Status,
     },
+
+    // Stock solution generation errors
+    #[error("No stock tiles provided")]
+    NoStockTiles,
+
+    #[error("No tiles to fit provided")]
+    NoTilesToFit,
+
+    #[error("Stock solution computation exceeded reasonable limits")]
+    StockComputationLimitExceeded,
 }
 
 /// Task-specific error type
