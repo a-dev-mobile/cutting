@@ -1,3 +1,7 @@
+use crate::{
+    cli::commands::{example_command, optimize_command, validate_command},
+    error::{OptimizerError, Result},
+};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -63,9 +67,7 @@ pub enum Commands {
 }
 
 impl Cli {
-    pub async fn execute(self) -> crate::Result<()> {
-        use crate::cli::commands::*;
-
+    pub async fn execute(self) -> Result<()> {
         match self.command {
             Commands::Optimize {
                 input,

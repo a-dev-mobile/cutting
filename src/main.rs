@@ -1,15 +1,18 @@
 use anyhow::Result;
 use clap::Parser;
+
 use tracing_subscriber::{filter::EnvFilter, fmt, prelude::*};
+
+use crate::cli::args::Cli;
 
 mod cli;
 mod engine;
 mod error;
 // mod io;
 mod models;
-// mod utils;
+mod utils;
 
-// use cli::Cli;
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,8 +22,8 @@ async fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    // let cli = Cli::parse();
-    // cli.execute().await
-    
+    let cli = Cli::parse();
+    cli.execute().await?;
+
     Ok(())
 }
