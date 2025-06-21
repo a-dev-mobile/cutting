@@ -29,5 +29,5 @@ pub use models::{enums::Orientation, Configuration, TileDimensions, DEFAULT_MATE
 pub mod prelude {
     //! Основные типы и трейты для удобного импорта
     pub use crate::error::{OptimizerError, Result};
-    pub use crate::models::{orientation, Configuration, TileDimensions, DEFAULT_MATERIAL};
+    pub use crate::models::{enums::Orientation, Configuration, TileDimensions, DEFAULT_MATERIAL};
 }

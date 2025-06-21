@@ -1,5 +1,5 @@
 use cutlist_optimizer_cli::stock::StockSolution;
-use cutlist_optimizer_cli::models::{TileDimensions, orientation};
+use cutlist_optimizer_cli::models::TileDimensions;
 
 #[cfg(test)]
 mod tests {

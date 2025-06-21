@@ -1,4 +1,4 @@
-use cutlist_optimizer_cli::models::{Mosaic, TileDimensions, TileNode, orientation};
+use cutlist_optimizer_cli::models::{Mosaic, TileDimensions, TileNode};
 
 #[cfg(test)]
 mod mosaic_tests {

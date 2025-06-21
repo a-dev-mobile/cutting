@@ -26,7 +26,7 @@ pub use calculation_response::CalculationResponse;
 pub use configuration::Configuration;
 pub use cut::{Cut, CutBuilder};
 pub use edge::Edge;
-pub use enums::orientation;
+pub use enums::Orientation;
 pub use final_tile::FinalTile;
 // pub use geometry::{Cut, Mosaic, TileNode};
 pub use grouped_tile_dimensions::GroupedTileDimensions;
