@@ -38,9 +38,9 @@ impl PriorityListFactory {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::comparator::PriorityListFactory;
-    /// use cutting::models::configuration::Configuration;
-    /// use cutting::models::enums::OptimizationPriority;
+    /// use cutlist_optimizer_cli::comparator::PriorityListFactory;
+    /// use cutlist_optimizer_cli::models::configuration::Configuration;
+    /// use cutlist_optimizer_cli::models::enums::OptimizationPriority;
     /// 
     /// let mut config = Configuration::default();
     /// config.optimization_priority = OptimizationPriority::MostTiles;
@@ -88,9 +88,9 @@ impl PriorityListFactory {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::comparator::{PriorityListFactory, SolutionComparator};
-    /// use cutting::models::configuration::Configuration;
-    /// use cutting::models::enums::OptimizationPriority;
+    /// use cutlist_optimizer_cli::comparator::{PriorityListFactory, SolutionComparator};
+    /// use cutlist_optimizer_cli::models::configuration::Configuration;
+    /// use cutlist_optimizer_cli::models::enums::OptimizationPriority;
     /// 
     /// let mut config = Configuration::default();
     /// config.optimization_priority = OptimizationPriority::MostTiles;
@@ -134,8 +134,8 @@ impl PriorityListFactory {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::comparator::PriorityListFactory;
-    /// use cutting::models::configuration::Configuration;
+    /// use cutlist_optimizer_cli::comparator::PriorityListFactory;
+    /// use cutlist_optimizer_cli::models::configuration::Configuration;
     /// 
     /// let config = Configuration::default();
     /// let functions = PriorityListFactory::get_final_solution_prioritized_comparator_functions(&config);

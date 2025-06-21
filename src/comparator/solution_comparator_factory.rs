@@ -48,7 +48,7 @@ impl SolutionComparatorFactory {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::comparator::SolutionComparatorFactory;
+    /// use cutlist_optimizer_cli::comparator::SolutionComparatorFactory;
     /// 
     /// let comparator = SolutionComparatorFactory::get_solution_comparator(
     ///     Some("MOST_TILES")
@@ -101,7 +101,7 @@ impl SolutionComparatorFactory {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::comparator::SolutionComparatorFactory;
+    /// use cutlist_optimizer_cli::comparator::SolutionComparatorFactory;
     /// 
     /// let priorities = vec!["MOST_TILES", "INVALID", "LEAST_WASTED_AREA"];
     /// let comparators = SolutionComparatorFactory::get_solution_comparator_list(&priorities);
