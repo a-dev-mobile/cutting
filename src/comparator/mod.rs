@@ -2,10 +2,14 @@ pub mod optimization;
 pub mod solution_comparators;
 pub mod solution_comparator_enum;
 pub mod solution_sorting_trait;
+pub mod solution_comparator_factory;
+pub mod priority_list_factory;
 
 pub use optimization::OptimizationPriority;
 pub use solution_comparator_enum::SolutionComparator;
 pub use solution_sorting_trait::SolutionSorting;
+pub use solution_comparator_factory::{SolutionComparatorFactory, ComparatorFactoryError};
+pub use priority_list_factory::PriorityListFactory;
 pub use solution_comparators::{
     compare_by_biggest_unused_tile_area,
     compare_by_least_nbr_cuts,
