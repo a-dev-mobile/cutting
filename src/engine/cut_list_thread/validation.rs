@@ -12,7 +12,7 @@ use super::structs::{CutListThread, SolutionComparator};
 
 impl CutListThread {
     /// Sort solutions using the provided comparators
-    pub fn sort_solutions(&self, solutions: &mut Vec<Solution>, comparators: &[SolutionComparator]) {
+    pub fn sort_solutions(&self, solutions: &mut [Solution], comparators: &[SolutionComparator]) {
         if comparators.is_empty() {
             return;
         }
@@ -113,8 +113,8 @@ impl CutListThread {
     ) -> Result<()> {
         // For now, just limit by accuracy factor
         // In full implementation, this would use the comparators
-        if solutions.len() > self.accuracy_factor as usize {
-            solutions.truncate(self.accuracy_factor as usize);
+        if solutions.len() > self.accuracy_factor {
+            solutions.truncate(self.accuracy_factor);
         }
         Ok(())
     }

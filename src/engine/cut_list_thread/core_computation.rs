@@ -59,10 +59,10 @@ impl CutListThread {
                 
                 // Try to fit into each mosaic in the solution
                 let mosaics = solution.get_mosaics();
-                for (_mosaic_index, mosaic) in mosaics.iter().enumerate() {
+                for mosaic in mosaics.iter() {
                     // Check material compatibility
                     let mosaic_material = mosaic.material();
-                    if mosaic_material != &tile_dimensions.material {
+                    if mosaic_material != tile_dimensions.material {
                         continue;
                     }
 
@@ -145,7 +145,7 @@ impl CutListThread {
                     for solution in top_solutions {
                         if let Some(material) = solution.get_material() {
                             if let Some(group) = solution.get_creator_thread_group() {
-                                task_guard.increment_thread_group_rankings(&material, &group);
+                                task_guard.increment_thread_group_rankings(material, group);
                             }
                         }
                     }
