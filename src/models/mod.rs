@@ -7,7 +7,7 @@ pub mod configuration;
 pub mod tile;
 
 // pub use calculation::{CalculationRequest, CalculationResponse};
-pub use configuration::Configuration;
+pub use configuration::{Configuration, PerformanceThresholds};
 // pub use geometry::{Cut, Mosaic, TileNode};
 // pub use solution::Solution;
 // pub use task::{Task, TaskStatus, TaskStatusResponse};

@@ -1,30 +1,5 @@
-use serde::{Deserialize, Serialize};
-
-/// Orientation of a tile (grain direction for wood, etc.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Orientation {
-    Horizontal,
-    Vertical,
-    Any,
-}
-
-impl Default for Orientation {
-    fn default() -> Self {
-        Self::Any
-    }
-}
-
-/// Represents the dimensions and properties of a tile/panel to be cut
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TileDimensions {
-    pub id: i32,
-    pub width: i32,
-    pub height: i32,
-    pub label: Option<String>,
-    pub material: String,
-    pub orientation: Orientation,
-    pub is_rotated: bool,
-}
+use super::structs::TileDimensions;
+use super::enums::Orientation;
 
 impl TileDimensions {
     /// Create a new tile with given dimensions
