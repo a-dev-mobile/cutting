@@ -19,6 +19,7 @@ pub const DEFAULT_MATERIAL: &str = "DEFAULT";
 pub use calculation_request::CalculationRequest;
 pub use configuration::Configuration;
 pub use cut::{Cut, CutBuilder};
+pub use edge::Edge;
 // pub use geometry::{Cut, Mosaic, TileNode};
 pub use panel::Panel;
 pub use performance_thresholds::PerformanceThresholds;
