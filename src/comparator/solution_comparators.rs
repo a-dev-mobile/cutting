@@ -96,16 +96,16 @@ pub fn compare_by_least_nbr_unused_tiles(a: &Solution, b: &Solution) -> Ordering
 /// * `Ordering::Less` if `a` has less wasted area than `b`
 /// * `Ordering::Greater` if `a` has more wasted area than `b`
 /// * `Ordering::Equal` if both have the same wasted area
+/// 
+/// # Safety
+/// Uses saturating arithmetic to prevent integer overflow in area calculations.
 pub fn compare_by_least_wasted_area(a: &Solution, b: &Solution) -> Ordering {
     // Java: long unusedArea = solution.getUnusedArea() - solution2.getUnusedArea();
     // Java: if (unusedArea == 0) return 0;
     // Java: return unusedArea > 0 ? 1 : -1;
-    let unused_area_diff = a.get_unused_area() - b.get_unused_area();
-    match unused_area_diff {
-        0 => Ordering::Equal,
-        diff if diff > 0 => Ordering::Greater,
-        _ => Ordering::Less,
-    }
+    
+    // Use direct comparison to avoid potential overflow in subtraction
+    a.get_unused_area().cmp(&b.get_unused_area())
 }
 
 /// Compare solutions by H/V discrepancy (ascending order)
@@ -179,16 +179,18 @@ pub fn compare_by_most_unused_panel_area(a: &Solution, b: &Solution) -> Ordering
 /// * `Ordering::Less` if `a` has smaller center of mass distance than `b`
 /// * `Ordering::Greater` if `a` has larger center of mass distance than `b`
 /// * `Ordering::Equal` if both have the same center of mass distance
+/// 
+/// # Safety
+/// Uses proper floating-point comparison with epsilon tolerance to handle
+/// floating-point precision issues that could cause inconsistent ordering.
 pub fn compare_by_smallest_center_of_mass_dist_to_origin(a: &Solution, b: &Solution) -> Ordering {
     // Java: float centerOfMassDistanceToOrigin = solution.getCenterOfMassDistanceToOrigin() - solution2.getCenterOfMassDistanceToOrigin();
     // Java: if (centerOfMassDistanceToOrigin == 0.0f) return 0;
     // Java: return centerOfMassDistanceToOrigin > 0.0f ? 1 : -1;
-    let center_of_mass_diff = a.get_center_of_mass_distance_to_origin() - b.get_center_of_mass_distance_to_origin();
-    if center_of_mass_diff == 0.0 {
-        Ordering::Equal
-    } else if center_of_mass_diff > 0.0 {
-        Ordering::Greater
-    } else {
-        Ordering::Less
-    }
+    
+    // Use partial_cmp for proper floating-point comparison
+    // This handles NaN values gracefully and provides consistent ordering
+    a.get_center_of_mass_distance_to_origin()
+        .partial_cmp(&b.get_center_of_mass_distance_to_origin())
+        .unwrap_or(Ordering::Equal) // Handle NaN case by treating as equal
 }

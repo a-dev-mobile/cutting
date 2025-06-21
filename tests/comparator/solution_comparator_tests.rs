@@ -225,6 +225,81 @@ mod tests {
     }
 
     #[test]
+    fn test_solution_sorting_trait_extended() {
+        let mut solutions = vec![
+            create_test_solution_with_different_areas(1000, 1000, 5),
+            create_test_solution_with_different_areas(1000, 1000, 2),
+            create_test_solution_with_different_areas(1000, 1000, 3),
+            create_test_solution_with_different_areas(1000, 1000, 1),
+            create_test_solution_with_different_areas(1000, 1000, 4),
+        ];
+
+        // Test unstable sorting
+        solutions.sort_unstable_by_comparator(SolutionComparator::LeastNbrMosaics);
+        for i in 0..solutions.len() - 1 {
+            assert!(solutions[i].get_nbr_mosaics() <= solutions[i + 1].get_nbr_mosaics());
+        }
+
+        // Test is_sorted check
+        assert!(solutions.is_sorted_by_comparator(SolutionComparator::LeastNbrMosaics));
+        
+        // Shuffle and verify it's no longer sorted
+        solutions.reverse();
+        assert!(!solutions.is_sorted_by_comparator(SolutionComparator::LeastNbrMosaics));
+
+        // Test top_n functionality
+        let top_3 = solutions.top_n_by_comparator(3, SolutionComparator::LeastNbrMosaics);
+        assert_eq!(top_3.len(), 3);
+        assert_eq!(top_3[0].get_nbr_mosaics(), 1);
+        assert_eq!(top_3[1].get_nbr_mosaics(), 2);
+        assert_eq!(top_3[2].get_nbr_mosaics(), 3);
+
+        // Test top_n with n larger than collection size
+        let all_solutions = solutions.top_n_by_comparator(10, SolutionComparator::LeastNbrMosaics);
+        assert_eq!(all_solutions.len(), 5);
+
+        // Test top_n with n = 0
+        let empty_result = solutions.top_n_by_comparator(0, SolutionComparator::LeastNbrMosaics);
+        assert!(empty_result.is_empty());
+    }
+
+    #[test]
+    fn test_empty_collection_edge_cases() {
+        let empty_solutions: Vec<Solution> = Vec::new();
+        
+        // Test best/worst on empty collection
+        assert!(empty_solutions.best_by_comparator(SolutionComparator::LeastNbrMosaics).is_none());
+        assert!(empty_solutions.worst_by_comparator(SolutionComparator::LeastNbrMosaics).is_none());
+        
+        // Test is_sorted on empty collection (should be true)
+        assert!(empty_solutions.is_sorted_by_comparator(SolutionComparator::LeastNbrMosaics));
+        
+        // Test top_n on empty collection
+        let top_n = empty_solutions.top_n_by_comparator(5, SolutionComparator::LeastNbrMosaics);
+        assert!(top_n.is_empty());
+    }
+
+    #[test]
+    fn test_single_element_collection() {
+        let solutions = vec![create_test_solution_with_different_areas(1000, 1000, 3)];
+        
+        // Test best/worst on single element
+        let best = solutions.best_by_comparator(SolutionComparator::LeastNbrMosaics);
+        let worst = solutions.worst_by_comparator(SolutionComparator::LeastNbrMosaics);
+        assert!(best.is_some());
+        assert!(worst.is_some());
+        assert_eq!(best.unwrap().get_nbr_mosaics(), worst.unwrap().get_nbr_mosaics());
+        
+        // Test is_sorted on single element (should be true)
+        assert!(solutions.is_sorted_by_comparator(SolutionComparator::LeastNbrMosaics));
+        
+        // Test top_n on single element
+        let top_1 = solutions.top_n_by_comparator(1, SolutionComparator::LeastNbrMosaics);
+        assert_eq!(top_1.len(), 1);
+        assert_eq!(top_1[0].get_nbr_mosaics(), 3);
+    }
+
+    #[test]
     fn test_equal_solutions() {
         let solution1 = create_test_solution_with_different_areas(1000, 1000, 2);
         let solution2 = create_test_solution_with_different_areas(1000, 1000, 2);

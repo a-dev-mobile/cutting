@@ -21,7 +21,12 @@ use super::{
 /// 
 /// This enum provides a type-safe way to select different comparison functions
 /// and can be used to dynamically choose sorting criteria at runtime.
+/// 
+/// # Performance
+/// All variants are zero-cost abstractions that compile to direct function calls.
+/// The enum itself is Copy and has no runtime overhead.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)] // Optimize enum representation for better performance
 pub enum SolutionComparator {
     /// Compare by biggest unused tile area (descending)
     BiggestUnusedTileArea,
