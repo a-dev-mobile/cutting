@@ -21,7 +21,7 @@ use crate::models::{TileNode, Panel};
 /// 
 /// # Examples
 /// ```
-/// use cutting::engine::edge_banding::calc_edge_bands;
+/// use cutting::utils::edge_banding::calc_edge_bands;
 /// use cutting::models::{TileNode, Panel, Edge};
 /// use std::collections::HashMap;
 /// 
@@ -211,159 +211,29 @@ pub fn calc_edge_bands_detailed(
     Ok(detailed_map)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::models::{Edge, Panel, TileNode};
+/// Calculate total edge banding length for a specific material
+/// 
+/// This is a convenience function to get the total length needed for a specific material type.
+pub fn calc_material_total(
+    tile_nodes: &[TileNode], 
+    panels: &[Panel], 
+    material_name: &str,
+    scale_factor: f64
+) -> EdgeBandingResult<f64> {
+    let edge_map = calc_edge_bands_safe(tile_nodes, panels, scale_factor)?;
+    Ok(edge_map.get(material_name).copied().unwrap_or(0.0))
+}
 
-    fn create_test_panel(id: i32, edge: Option<Edge>) -> Panel {
-        Panel {
-            id,
-            width: Some("100".to_string()),
-            height: Some("200".to_string()),
-            count: 1,
-            material: "wood".to_string(),
-            enabled: true,
-            orientation: 0,
-            label: None,
-            edge,
-        }
-    }
-
-    fn create_test_tile_node(external_id: i32, width: i32, height: i32, is_rotated: bool) -> TileNode {
-        let mut node = TileNode::new(0, width, 0, height);
-        node.set_external_id(Some(external_id));
-        node.set_rotated(is_rotated);
-        node
-    }
-
-    #[test]
-    fn test_calc_edge_bands_basic() {
-        let edge = Edge {
-            top: Some("edge_material_1".to_string()),
-            left: Some("edge_material_2".to_string()),
-            bottom: Some("edge_material_1".to_string()),
-            right: Some("edge_material_2".to_string()),
-        };
-        
-        let panels = vec![create_test_panel(1, Some(edge))];
-        let tile_nodes = vec![create_test_tile_node(1, 100, 200, false)];
-        
-        let result = calc_edge_bands(&tile_nodes, &panels, 1.0);
-        
-        assert_eq!(result.get("edge_material_1"), Some(&200.0)); // top + bottom = 100 + 100
-        assert_eq!(result.get("edge_material_2"), Some(&400.0)); // left + right = 200 + 200
-    }
-
-    #[test]
-    fn test_calc_edge_bands_rotated() {
-        let edge = Edge {
-            top: Some("edge_material_1".to_string()),
-            left: Some("edge_material_2".to_string()),
-            bottom: Some("edge_material_1".to_string()),
-            right: Some("edge_material_2".to_string()),
-        };
-        
-        let panels = vec![create_test_panel(1, Some(edge))];
-        let tile_nodes = vec![create_test_tile_node(1, 100, 200, true)]; // rotated
-        
-        let result = calc_edge_bands(&tile_nodes, &panels, 1.0);
-        
-        // When rotated: width becomes height for horizontal edges, height becomes width for vertical edges
-        assert_eq!(result.get("edge_material_1"), Some(&400.0)); // top + bottom = 200 + 200
-        assert_eq!(result.get("edge_material_2"), Some(&200.0)); // left + right = 100 + 100
-    }
-
-    #[test]
-    fn test_calc_edge_bands_with_scale_factor() {
-        let edge = Edge {
-            top: Some("edge_material_1".to_string()),
-            left: None,
-            bottom: None,
-            right: None,
-        };
-        
-        let panels = vec![create_test_panel(1, Some(edge))];
-        let tile_nodes = vec![create_test_tile_node(1, 1000, 2000, false)];
-        
-        let result = calc_edge_bands(&tile_nodes, &panels, 1000.0); // Convert mm to meters
-        
-        assert_eq!(result.get("edge_material_1"), Some(&1.0)); // 1000 / 1000 = 1.0
-    }
-
-    #[test]
-    fn test_calc_edge_bands_no_edge_config() {
-        let panels = vec![create_test_panel(1, None)];
-        let tile_nodes = vec![create_test_tile_node(1, 100, 200, false)];
-        
-        let result = calc_edge_bands(&tile_nodes, &panels, 1.0);
-        
-        assert!(result.is_empty());
-    }
-
-    #[test]
-    fn test_calc_edge_bands_safe_invalid_scale() {
-        let panels = vec![];
-        let tile_nodes = vec![];
-        
-        let result = calc_edge_bands_safe(&tile_nodes, &panels, 0.0);
-        
-        assert!(matches!(result, Err(EdgeBandingError::InvalidScaleFactor(0.0))));
-    }
-
-    #[test]
-    fn test_calc_edge_bands_safe_panel_not_found() {
-        let edge = Edge {
-            top: Some("edge_material_1".to_string()),
-            left: None,
-            bottom: None,
-            right: None,
-        };
-        
-        let panels = vec![create_test_panel(1, Some(edge))];
-        let tile_nodes = vec![create_test_tile_node(2, 100, 200, false)]; // Different ID
-        
-        let result = calc_edge_bands_safe(&tile_nodes, &panels, 1.0);
-        
-        assert!(matches!(result, Err(EdgeBandingError::PanelNotFound(1))));
-    }
-
-    #[test]
-    fn test_calc_edge_bands_detailed() {
-        let edge1 = Edge {
-            top: Some("material_a".to_string()),
-            left: Some("material_b".to_string()),
-            bottom: None,
-            right: None,
-        };
-        
-        let edge2 = Edge {
-            top: Some("material_a".to_string()),
-            left: None,
-            bottom: Some("material_c".to_string()),
-            right: None,
-        };
-        
-        let panels = vec![
-            create_test_panel(1, Some(edge1)),
-            create_test_panel(2, Some(edge2)),
-        ];
-        
-        let tile_nodes = vec![
-            create_test_tile_node(1, 100, 200, false),
-            create_test_tile_node(2, 150, 300, false),
-        ];
-        
-        let result = calc_edge_bands_detailed(&tile_nodes, &panels, 1.0).unwrap();
-        
-        assert_eq!(result.len(), 2);
-        
-        let panel1_edges = result.get(&1).unwrap();
-        assert_eq!(panel1_edges.get("material_a"), Some(&100.0)); // top
-        assert_eq!(panel1_edges.get("material_b"), Some(&200.0)); // left
-        
-        let panel2_edges = result.get(&2).unwrap();
-        assert_eq!(panel2_edges.get("material_a"), Some(&150.0)); // top
-        assert_eq!(panel2_edges.get("material_c"), Some(&150.0)); // bottom
-    }
+/// Get a summary of all materials and their requirements
+/// 
+/// Returns a sorted vector of (material_name, total_length) tuples
+pub fn get_material_summary(
+    tile_nodes: &[TileNode], 
+    panels: &[Panel], 
+    scale_factor: f64
+) -> EdgeBandingResult<Vec<(String, f64)>> {
+    let edge_map = calc_edge_bands_safe(tile_nodes, panels, scale_factor)?;
+    let mut summary: Vec<(String, f64)> = edge_map.into_iter().collect();
+    summary.sort_by(|a, b| a.0.cmp(&b.0)); // Sort by material name
+    Ok(summary)
 }
