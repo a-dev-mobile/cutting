@@ -364,9 +364,9 @@ fn test_sort_solutions() {
     ];
     
     // Ensure they have different IDs by creating them separately
-    let id1 = solutions[0].id;
-    let id2 = solutions[1].id;
-    let id3 = solutions[2].id;
+    let _id1 = solutions[0].id;
+    let _id2 = solutions[1].id;
+    let _id3 = solutions[2].id;
     
     // Create a comparator that sorts by ID in reverse order
     let comparators: Vec<SolutionComparator> = vec![
@@ -556,9 +556,9 @@ fn test_error_handling() {
     let invalid_node = TileNode::new(0, 0, 0, 0); // Zero-sized node
     
     // These should handle gracefully or return appropriate errors
-    let result = thread.split_horizontally(&invalid_node, 100, 3, 1);
+    let _result = thread.split_horizontally(&invalid_node, 100, 3, 1);
     // The implementation should handle this case appropriately
     
-    let result = thread.split_vertically(&invalid_node, 100, 3, 1);
+    let _result = thread.split_vertically(&invalid_node, 100, 3, 1);
     // The implementation should handle this case appropriately
 }
