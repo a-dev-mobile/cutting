@@ -1,19 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::error::{OptimizerError, Result};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum OptimizationPriority {
-    MostTiles,
-    LeastWastedArea,
-    LeastNbrCuts,
-    MostHvDiscrepancy,
-    BiggestUnusedTileArea,
-    SmallestCenterOfMassDistToOrigin,
-    LeastNbrMosaics,
-    LeastNbrUnusedTiles,
-    MostUnusedPanelArea,
-}
-
+use crate::engine::comparator::OptimizationPriority;
 
 /// Configuration parameters for the optimization process
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +48,7 @@ impl Default for Configuration {
             min_trim_dimension: 10,
             consider_orientation: true,
             optimization_factor: 5,
-            optimization_priority: OptimizationPriority::MinimizeWaste,
+            optimization_priority: OptimizationPriority::LeastWastedArea,
             use_single_stock_unit: false,
             units: "mm".to_string(),
             performance_thresholds: PerformanceThresholds::default(),
