@@ -1,3 +1,4 @@
+pub mod calculation_request_tests;
 pub mod cut_tests;
 pub mod edge_tests;
 pub mod panel_tests;

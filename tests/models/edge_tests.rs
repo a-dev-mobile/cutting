@@ -4,7 +4,6 @@
 mod edge_tests {
     use cutlist_optimizer_cli::models::edge::Edge;
 
-    use super::*;
 
     #[test]
     fn test_edge_default() {

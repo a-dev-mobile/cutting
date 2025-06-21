@@ -1,5 +1,5 @@
 
-// pub mod calculation;
+pub mod calculation_request;
 pub mod configuration;
 pub mod cut;
 // pub mod geometry;
@@ -16,11 +16,11 @@ pub mod tile_node;
 /// Default material name used across the application
 pub const DEFAULT_MATERIAL: &str = "DEFAULT";
 
-// pub use calculation::{CalculationRequest, CalculationResponse};
+pub use calculation_request::CalculationRequest;
 pub use configuration::Configuration;
 pub use cut::{Cut, CutBuilder};
 // pub use geometry::{Cut, Mosaic, TileNode};
-
+pub use panel::Panel;
 pub use performance_thresholds::PerformanceThresholds;
 // pub use solution::Solution;
 // pub use task::{Task, TaskStatus, TaskStatusResponse};
