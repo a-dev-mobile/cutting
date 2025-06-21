@@ -1,15 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use crate::models::DEFAULT_MATERIAL;
-
-/// Represents an edge configuration for a panel
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-pub struct Edge {
-    pub top: Option<String>,
-    pub left: Option<String>,
-    pub bottom: Option<String>,
-    pub right: Option<String>,
-}
+use crate::models::panel::edge::Edge;
 
 /// Represents a panel with dimensions, material, and configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
