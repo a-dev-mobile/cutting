@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
-use super::enums::Orientation;
+
+use crate::Orientation;
+
+
+
+
+
 
 /// Represents the dimensions and properties of a tile/panel to be cut
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

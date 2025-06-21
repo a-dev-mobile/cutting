@@ -1,7 +1,9 @@
-use cutlist_optimizer_cli::models::{Mosaic, TileDimensions, TileNode, Orientation};
+use cutlist_optimizer_cli::models::{Mosaic, TileDimensions, TileNode, orientation};
 
 #[cfg(test)]
 mod mosaic_tests {
+    use cutlist_optimizer_cli::Orientation;
+
     use super::*;
 
     #[test]

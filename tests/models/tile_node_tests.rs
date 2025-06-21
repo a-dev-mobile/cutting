@@ -1,4 +1,4 @@
-use cutlist_optimizer_cli::models::{TileNode, TileDimensions, Orientation};
+use cutlist_optimizer_cli::{models::{orientation, TileDimensions, TileNode}, Orientation};
 
 #[test]
 fn test_tile_node_creation() {

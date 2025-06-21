@@ -1,6 +1,6 @@
 //! Пример базового использования библиотеки cutlist-optimizer-cli
 
-use cutlist_optimizer_cli::prelude::*;
+use cutlist_optimizer_cli::{Orientation, prelude::*};
 
 fn main() -> Result<()> {
     println!("Пример использования библиотеки CutList Optimizer");

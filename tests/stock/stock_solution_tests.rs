@@ -1,8 +1,10 @@
 use cutlist_optimizer_cli::stock::StockSolution;
-use cutlist_optimizer_cli::models::{TileDimensions, Orientation};
+use cutlist_optimizer_cli::models::{TileDimensions, orientation};
 
 #[cfg(test)]
 mod tests {
+    use cutlist_optimizer_cli::Orientation;
+
     use super::*;
 
     fn create_test_tile(id: i32, width: i32, height: i32) -> TileDimensions {

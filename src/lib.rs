@@ -1,5 +1,5 @@
 //! CutList Optimizer - Core library for material cutting optimization
-//! 
+//!
 //! This library provides algorithms and data structures for optimizing
 //! the layout of cuts when processing sheet materials like wood, metal, etc.
 //!
@@ -7,7 +7,7 @@
 //!
 //! ```rust
 //! use cutlist_optimizer_cli::{models::Configuration, Result};
-//! 
+//!
 //! // Создание конфигурации для оптимизации
 //! let config = Configuration::default();
 //! ```
@@ -23,11 +23,11 @@ pub mod utils;
 
 // Публичный API библиотеки
 pub use error::{OptimizerError, Result};
-pub use models::{Configuration, TileDimensions, Orientation, DEFAULT_MATERIAL};
+pub use models::{enums::Orientation, Configuration, TileDimensions, DEFAULT_MATERIAL};
 
 // Основные типы для работы с библиотекой
 pub mod prelude {
     //! Основные типы и трейты для удобного импорта
     pub use crate::error::{OptimizerError, Result};
-    pub use crate::models::{Configuration, TileDimensions, Orientation, DEFAULT_MATERIAL};
+    pub use crate::models::{orientation, Configuration, TileDimensions, DEFAULT_MATERIAL};
 }

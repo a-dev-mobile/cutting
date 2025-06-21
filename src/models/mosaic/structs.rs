@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::models::{Cut, TileNode, TileDimensions, Orientation};
+use crate::{models::{Cut, TileDimensions, TileNode}, Orientation};
 
 /// Represents a complete cutting solution for a piece of material
 /// 

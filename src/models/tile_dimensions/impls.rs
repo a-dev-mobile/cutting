@@ -1,6 +1,6 @@
 use super::structs::TileDimensions;
-use super::enums::Orientation;
-use crate::models::DEFAULT_MATERIAL;
+
+use crate::{models::DEFAULT_MATERIAL, Orientation};
 
 impl TileDimensions {
     /// Create a new tile with given dimensions

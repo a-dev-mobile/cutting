@@ -1,5 +1,6 @@
 use super::structs::{TileNode, NEXT_ID};
 use crate::models::{Tile, TileDimensions};
+use crate::Orientation;
 use std::collections::HashSet;
 use std::sync::atomic::Ordering;
 
@@ -429,7 +430,7 @@ impl TileNode {
             height: self.height(),
             label: None,
             material: String::from("default"),
-            orientation: crate::models::Orientation::Any,
+            orientation: Orientation::Any,
             is_rotated: self.is_rotated,
         }
     }

@@ -107,7 +107,7 @@ impl Hash for GroupedTileDimensions {
         self.tile_dimensions.height.hash(state);
         self.tile_dimensions.label.hash(state);
         self.tile_dimensions.material.hash(state);
-        // Note: orientation and is_rotated would need to be hashed too if they implement Hash
+        // Note: Orientation and is_rotated would need to be hashed too if they implement Hash
 
         // Then incorporate the group with the Java-style multiplication by 31
         let base_hash = {

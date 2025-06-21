@@ -1,5 +1,5 @@
 use super::structs::Mosaic;
-use crate::models::{Cut, TileNode, TileDimensions, Orientation};
+use crate::{models::{ Cut, TileDimensions, TileNode}, Orientation, };
 use std::collections::HashSet;
 
 impl Mosaic {
