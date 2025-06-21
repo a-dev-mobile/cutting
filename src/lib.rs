@@ -23,11 +23,21 @@ pub mod utils;
 
 // Публичный API библиотеки
 pub use error::{OptimizerError, Result};
-pub use models::{enums::Orientation, Configuration, TileDimensions, DEFAULT_MATERIAL};
+pub use models::{
+    enums::{CutDirection, OptimizationPriority, Orientation, Status, StatusCode},
+    Configuration,
+    TileDimensions,
+    DEFAULT_MATERIAL,
+};
 
 // Основные типы для работы с библиотекой
 pub mod prelude {
     //! Основные типы и трейты для удобного импорта
     pub use crate::error::{OptimizerError, Result};
-    pub use crate::models::{enums::Orientation, Configuration, TileDimensions, DEFAULT_MATERIAL};
+    pub use crate::models::{
+        enums::{CutDirection, OptimizationPriority, Orientation, Status, StatusCode},
+        Configuration,
+        TileDimensions,
+        DEFAULT_MATERIAL,
+    };
 }
