@@ -7,7 +7,8 @@ use tokio::time::sleep;
 use crate::{log_debug, log_error};
 
 use crate::models::task::Task;
-use crate::stock::{StockSolution, StockConstants};
+use crate::stock::StockSolution;
+use crate::constants::StockConstants;
 use crate::error::{AppError, Result};
 use super::StockPanelPicker;
 

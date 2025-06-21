@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 use crate::logging::{log_info, log_progress};
-use crate::stock::constants::PerformanceConstants;
+use crate::constants::PerformanceConstants;
 
 /// A simple progress reporter for long-running operations
 pub struct ProgressReporter {

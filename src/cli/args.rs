@@ -1,7 +1,7 @@
 use crate::{
     cli::commands::{example_command, optimize_command, validate_command},
     error::Result,
-    stock::constants::ConfigurationDefaults,
+    constants::ConfigurationDefaults,
 };
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

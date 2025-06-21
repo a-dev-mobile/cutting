@@ -1,6 +1,6 @@
 use crate::models::TileDimensions;
 use crate::stock::StockSolution;
-use crate::stock::constants::PerformanceConstants;
+use crate::constants::PerformanceConstants;
 use std::collections::HashSet;
 
 /// Configuration and state for generating stock solutions

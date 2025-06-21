@@ -2,7 +2,7 @@ use super::structs::Configuration;
 use crate::comparator::OptimizationPriority;
 use crate::error::{AppError, Result};
 use crate::models::performance_thresholds::PerformanceThresholds;
-use crate::stock::constants::ConfigurationDefaults;
+use crate::constants::ConfigurationDefaults;
 
 impl Default for Configuration {
     fn default() -> Self {

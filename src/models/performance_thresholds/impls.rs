@@ -1,6 +1,6 @@
 use super::structs::PerformanceThresholds;
 use crate::error::{AppError, Result};
-use crate::stock::constants::PerformanceConstants;
+use crate::constants::PerformanceConstants;
 
 impl Default for PerformanceThresholds {
     fn default() -> Self {

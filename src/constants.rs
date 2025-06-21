@@ -1,7 +1,7 @@
-//! Constants for stock solution generation and management
+//! Global constants for the cutting optimization system
 //! 
-//! This module centralizes all configuration constants used throughout the stock
-//! solution generation system to ensure consistency and easy maintenance.
+//! This module centralizes all configuration constants used throughout the
+//! application to ensure consistency and easy maintenance.
 
 /// Stock solution generation configuration constants
 pub struct StockConstants;

@@ -7,7 +7,8 @@ use crate::{
         Solution, TileDimensions,
         task::Task,
     },
-    stock::{StockSolution, constants::ConfigurationDefaults},
+    stock::StockSolution,
+    constants::ConfigurationDefaults,
     CutDirection, Status,
 };
 use std::{
