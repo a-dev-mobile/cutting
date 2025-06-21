@@ -1,7 +1,7 @@
 //! Tests for TaskStatusResponse
 
 use cutlist_optimizer_cli::models::{TaskStatusResponse, CalculationResponse, enums::Status};
-use cutlist_optimizer_cli::error::AppError;
+use cutlist_optimizer_cli::errors::{AppError, CoreError};
 
 #[test]
 fn test_new_task_status_response() {
@@ -47,7 +47,7 @@ fn test_with_details_invalid_percentage_done() {
     
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
+        AppError::Core(CoreError::InvalidInput { details }) => {
             assert!(details.contains("percentage_done must be <= 100"));
         }
         _ => panic!("Expected InvalidInput error"),
@@ -65,7 +65,7 @@ fn test_with_details_invalid_init_percentage() {
     
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
+        AppError::Core(CoreError::InvalidInput { details }) => {
             assert!(details.contains("init_percentage must be <= 100"));
         }
         _ => panic!("Expected InvalidInput error"),
@@ -86,7 +86,7 @@ fn test_set_percentage_done_invalid() {
     
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
+        AppError::Core(CoreError::InvalidInput { details }) => {
             assert!(details.contains("percentage_done must be <= 100"));
         }
         _ => panic!("Expected InvalidInput error"),
@@ -107,7 +107,7 @@ fn test_set_init_percentage_invalid() {
     
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
+        AppError::Core(CoreError::InvalidInput { details }) => {
             assert!(details.contains("init_percentage must be <= 100"));
         }
         _ => panic!("Expected InvalidInput error"),

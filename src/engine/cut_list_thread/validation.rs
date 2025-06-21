@@ -4,7 +4,7 @@
 
 use crate::{
     models::Solution,
-    error::{AppError, Result},
+    errors::{AppError, Result},
 };
 use std::collections::HashSet;
 
@@ -32,46 +32,34 @@ impl CutListThread {
     pub fn validate_configuration(&self) -> Result<()> {
         // Validate tiles
         if self.tiles.is_empty() {
-            return Err(AppError::InvalidInput { 
-                details: "No tiles provided for optimization".to_string() 
-            });
+            return Err(AppError::invalid_input("No tiles provided for optimization"));
         }
 
         // Validate cut thickness
         if self.cut_thickness < 0 {
-            return Err(AppError::InvalidInput {
-                details: "Cut thickness cannot be negative".to_string()
-            });
+            return Err(AppError::invalid_input("Cut thickness cannot be negative"));
         }
 
         // Validate min trim dimension
         if self.min_trim_dimension < 0 {
-            return Err(AppError::InvalidInput {
-                details: "Minimum trim dimension cannot be negative".to_string()
-            });
+            return Err(AppError::invalid_input("Minimum trim dimension cannot be negative"));
         }
 
         // Validate accuracy factor
         if self.accuracy_factor == 0 {
-            return Err(AppError::InvalidInput {
-                details: "Accuracy factor must be greater than zero".to_string()
-            });
+            return Err(AppError::invalid_input("Accuracy factor must be greater than zero"));
         }
 
         // Validate stock solution
         if self.stock_solution.is_none() {
-            return Err(AppError::InvalidInput {
-                details: "Stock solution is required".to_string()
-            });
+            return Err(AppError::invalid_input("Stock solution is required"));
         }
 
         // Validate tile dimensions
         for (index, tile) in self.tiles.iter().enumerate() {
             if tile.width <= 0 || tile.height <= 0 {
-                return Err(AppError::InvalidInput {
-                    details: format!("Tile {} has invalid dimensions: {}x{}", 
-                                   index, tile.width, tile.height)
-                });
+                return Err(AppError::invalid_input(format!("Tile {} has invalid dimensions: {}x{}", 
+                                   index, tile.width, tile.height)));
             }
         }
 

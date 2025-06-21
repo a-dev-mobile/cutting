@@ -1,5 +1,5 @@
 use super::structs::StockSolutionGenerator;
-use crate::error::AppError;
+use crate::errors::AppError;
 use crate::models::TileDimensions;
 use crate::stock::StockSolution;
 use std::collections::HashSet;
@@ -12,10 +12,10 @@ impl StockSolutionGenerator {
         max_stock_solution_length_hint: Option<usize>,
     ) -> Result<Self, AppError> {
         if tiles_to_fit.is_empty() {
-            return Err(AppError::NoTilesToFit);
+            return Err(AppError::no_tiles_to_fit());
         }
         if stock_tiles.is_empty() {
-            return Err(AppError::NoStockTiles);
+            return Err(AppError::no_stock_tiles());
         }
 
         let mut generator = Self {

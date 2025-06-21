@@ -1,7 +1,7 @@
 //! TaskStatusResponse implementation
 
 use crate::models::{CalculationResponse, enums::Status};
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use super::TaskStatusResponse;
 
 impl TaskStatusResponse {
@@ -33,7 +33,7 @@ impl TaskStatusResponse {
     /// A new TaskStatusResponse instance
     /// 
     /// # Errors
-    /// Returns `AppError::InvalidInput` if percentage values are invalid
+    /// Returns `AppError::invalid_input` if percentage values are invalid
     pub fn with_details(
         status: Status,
         percentage_done: u8,
@@ -41,15 +41,11 @@ impl TaskStatusResponse {
         solution: Option<CalculationResponse>,
     ) -> Result<Self> {
         if percentage_done > 100 {
-            return Err(AppError::InvalidInput {
-                details: format!("percentage_done must be <= 100, got {}", percentage_done),
-            });
+            return Err(AppError::invalid_input(format!("percentage_done must be <= 100, got {}", percentage_done)));
         }
         
         if init_percentage > 100 {
-            return Err(AppError::InvalidInput {
-                details: format!("init_percentage must be <= 100, got {}", init_percentage),
-            });
+            return Err(AppError::invalid_input(format!("init_percentage must be <= 100, got {}", init_percentage)));
         }
 
         Ok(Self {
@@ -84,12 +80,10 @@ impl TaskStatusResponse {
     /// * `percentage` - The completion percentage (0-100)
     /// 
     /// # Errors
-    /// Returns `AppError::InvalidInput` if percentage is > 100
+    /// Returns `AppError::invalid_input` if percentage is > 100
     pub fn set_percentage_done(&mut self, percentage: u8) -> Result<()> {
         if percentage > 100 {
-            return Err(AppError::InvalidInput {
-                details: format!("percentage_done must be <= 100, got {}", percentage),
-            });
+            return Err(AppError::invalid_input(format!("percentage_done must be <= 100, got {}", percentage)));
         }
         self.percentage_done = percentage;
         Ok(())
@@ -106,12 +100,10 @@ impl TaskStatusResponse {
     /// * `percentage` - The initial percentage (0-100)
     /// 
     /// # Errors
-    /// Returns `AppError::InvalidInput` if percentage is > 100
+    /// Returns `AppError::invalid_input` if percentage is > 100
     pub fn set_init_percentage(&mut self, percentage: u8) -> Result<()> {
         if percentage > 100 {
-            return Err(AppError::InvalidInput {
-                details: format!("init_percentage must be <= 100, got {}", percentage),
-            });
+            return Err(AppError::invalid_input(format!("init_percentage must be <= 100, got {}", percentage)));
         }
         self.init_percentage = percentage;
         Ok(())
@@ -172,7 +164,7 @@ impl TaskStatusResponse {
     /// * `status` - Optional new status
     /// 
     /// # Errors
-    /// Returns `AppError::InvalidInput` if percentage is > 100
+    /// Returns `AppError::invalid_input` if percentage is > 100
     pub fn update_progress(&mut self, percentage: u8, status: Option<Status>) -> Result<()> {
         self.set_percentage_done(percentage)?;
         if let Some(new_status) = status {

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 // Helper function for creating test pickers
-fn create_test_picker() -> cutlist_optimizer_cli::error::Result<StockPanelPicker> {
+fn create_test_picker() -> cutlist_optimizer_cli::errors::Result<StockPanelPicker> {
     let task = Arc::new(Task::new("test".to_string()));
     let tiles_to_fit = vec![TileDimensions::new(100, 100, 1)];
     let stock_tiles = vec![TileDimensions::new(200, 200, 1)];

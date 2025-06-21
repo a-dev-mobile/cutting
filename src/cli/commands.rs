@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use crate::logging::{log_info, log_operation_start, log_operation_success};
 /// Execute the optimize command
 pub async fn optimize_command(
@@ -23,13 +23,11 @@ pub async fn optimize_command(
     // TODO: Implement actual optimization logic
     // For now, just validate that the input file exists
     if !input.exists() {
-        return Err(AppError::InvalidInput {
-            details: format!("Input file does not exist: {:?}", input),
-        });
+        return Err(AppError::invalid_input(format!("Input file does not exist: {:?}", input)));
     }
     /* 
     
-             return Err(AppError::InvalidConfiguration {
+             return Err(AppError::invalid_configuration {
                 message: "Cut thickness cannot be negative".to_string(),
             });
      */
@@ -43,9 +41,7 @@ pub async fn validate_command(input: PathBuf) -> Result<()> {
     log_operation_start!("Validating input file: {:?}", input);
     
     if !input.exists() {
-        return Err(AppError::InvalidInput {
-            details: format!("Input file does not exist: {:?}", input),
-        });
+        return Err(AppError::invalid_input(format!("Input file does not exist: {:?}", input)));
     }
     
     // TODO: Implement actual validation logic
@@ -60,9 +56,7 @@ pub async fn validate_command(input: PathBuf) -> Result<()> {
             // TODO: Validate JSON structure
         }
         _ => {
-            return Err(AppError::InvalidInput {
-                details: "Unsupported file format. Expected .csv or .json".to_string(),
-            });
+            return Err(AppError::invalid_input("Unsupported file format. Expected .csv or .json"));
         }
     }
     
@@ -112,9 +106,7 @@ pub async fn example_command(format: String) -> Result<()> {
             log_info!("cutlist optimize -i input.json -o output.json");
         }
         _ => {
-            return Err(AppError::InvalidInput {
-                details: format!("Unsupported format: {}. Use 'csv' or 'json'", format),
-            });
+            return Err(AppError::invalid_input(format!("Unsupported format: {}. Use 'csv' or 'json'", format)));
         }
     }
     

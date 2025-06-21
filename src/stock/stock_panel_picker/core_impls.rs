@@ -1,7 +1,7 @@
 //! Core implementation methods for StockPanelPicker
 
 use std::sync::Arc;
-use crate::{log_debug, error::{AppError, Result}};
+use crate::{log_debug, errors::{AppError, Result}};
 use super::{StockPanelPicker, StockPanelPickerStats, SolutionSortConfig};
 
 impl StockPanelPicker {
@@ -15,19 +15,19 @@ impl StockPanelPicker {
     /// Get statistics about the current state of the stock panel picker
     pub fn get_stats(&self) -> Result<StockPanelPickerStats> {
         let solutions = self.stock_solutions.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock stock solutions: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock stock solutions: {}", e)
+            ))?;
         
         let max_retrieved_idx = *self.max_retrieved_idx.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock max retrieved index: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock max retrieved index: {}", e)
+            ))?;
 
         let generation_thread = self.generation_thread.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock generation thread: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock generation thread: {}", e)
+            ))?;
 
         let is_generating = generation_thread.as_ref()
             .map(|handle| !handle.is_finished())
@@ -47,9 +47,9 @@ impl StockPanelPicker {
     /// Note: The Java version silently ignores sorting exceptions, this version returns errors
     pub fn sort_stock_solutions(&self, config: &SolutionSortConfig) -> Result<()> {
         let mut solutions = self.stock_solutions.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock stock solutions for sorting: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock stock solutions for sorting: {}", e)
+            ))?;
 
         if config.sort_by_area {
             // Use stable sort to maintain order for equal elements
@@ -86,9 +86,9 @@ impl StockPanelPicker {
     /// This corresponds exactly to the Java method: `sortStockSolutions()`
     pub fn sort_stock_solutions_java_compatible(&self) -> Result<()> {
         let mut solutions = self.stock_solutions.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock stock solutions for sorting: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock stock solutions for sorting: {}", e)
+            ))?;
 
         // Java-compatible sorting with potential overflow behavior
         // Java code: return (int) (stockSolution.getTotalArea() - stockSolution2.getTotalArea());
@@ -134,9 +134,9 @@ impl StockPanelPicker {
     /// Check if the picker has been initialized (thread started)
     pub fn is_initialized(&self) -> Result<bool> {
         let generation_thread = self.generation_thread.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock generation thread: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock generation thread: {}", e)
+            ))?;
 
         Ok(generation_thread.is_some())
     }
@@ -144,9 +144,9 @@ impl StockPanelPicker {
     /// Get the number of currently generated solutions
     pub fn solution_count(&self) -> Result<usize> {
         let solutions = self.stock_solutions.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock stock solutions: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock stock solutions: {}", e)
+            ))?;
 
         Ok(solutions.len())
     }
@@ -154,9 +154,9 @@ impl StockPanelPicker {
     /// Check if more solutions are being generated
     pub fn is_generating(&self) -> Result<bool> {
         let generation_thread = self.generation_thread.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock generation thread: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock generation thread: {}", e)
+            ))?;
 
         Ok(generation_thread.as_ref()
             .map(|handle| !handle.is_finished())
@@ -171,9 +171,9 @@ impl StockPanelPicker {
     /// Get the maximum retrieved index
     pub fn get_max_retrieved_idx(&self) -> Result<usize> {
         let max_idx = *self.max_retrieved_idx.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock max retrieved index: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock max retrieved index: {}", e)
+            ))?;
 
         Ok(max_idx)
     }

@@ -1,7 +1,7 @@
 //! Compatibility layer for Java-style API usage
 
 use std::time::Duration;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use crate::stock::StockSolution;
 use crate::constants::StockConstants;
 use super::StockPanelPicker;
@@ -24,7 +24,7 @@ impl StockPanelPicker {
     pub fn get_stock_solution_blocking(&self, index: usize, timeout: Option<Duration>) -> Result<Option<StockSolution>> {
         // Check if thread is initialized
         if !self.is_initialized()? {
-            return Err(AppError::StockPanelPickerNotInitialized);
+            return Err(AppError::stock_panel_picker_not_initialized());
         }
 
         let start_time = std::time::Instant::now();
@@ -33,24 +33,18 @@ impl StockPanelPicker {
         loop {
             iteration_count += 1;
             if iteration_count > StockConstants::MAX_ITERATIONS {
-                return Err(AppError::StockGenerationInterrupted {
-                    message: "Maximum iteration count exceeded".to_string(),
-                });
+                return Err(AppError::stock_generation_interrupted("Maximum iteration count exceeded"));
             }
 
             // Check for interruption signal before each operation (Java-style)
             if self.is_interrupted()? {
-                return Err(AppError::StockGenerationInterrupted {
-                    message: "Operation was interrupted".to_string(),
-                });
+                return Err(AppError::stock_generation_interrupted("Operation was interrupted"));
             }
 
             // Check timeout
             if let Some(timeout_duration) = timeout {
                 if start_time.elapsed() >= timeout_duration {
-                    return Err(AppError::StockGenerationInterrupted {
-                        message: "Operation timed out".to_string(),
-                    });
+                    return Err(AppError::stock_generation_interrupted("Operation timed out"));
                 }
             }
 
@@ -73,17 +67,13 @@ impl StockPanelPicker {
     /// Try to get a solution immediately without waiting
     fn try_get_solution_immediate(&self, index: usize) -> Result<Option<StockSolution>> {
         let solutions = self.stock_solutions.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock stock solutions: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(format!("Failed to lock stock solutions: {}", e)))?;
 
         if solutions.len() > index {
             // Update max retrieved index
             {
                 let mut max_idx = self.max_retrieved_idx.lock()
-                    .map_err(|e| AppError::ThreadSync { 
-                        message: format!("Failed to lock max retrieved index: {}", e) 
-                    })?;
+                    .map_err(|e| AppError::thread_sync(format!("Failed to lock max retrieved index: {}", e)))?;
                 *max_idx = (*max_idx).max(index);
             }
             Ok(Some(solutions[index].clone()))
@@ -98,9 +88,7 @@ impl StockPanelPicker {
     pub fn init_sync(&self) -> Result<()> {
         // Use a simple runtime for the async init
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| AppError::ThreadError {
-                details: format!("Failed to create async runtime: {}", e),
-            })?;
+            .map_err(|e| AppError::thread_error(format!("Failed to create async runtime: {}", e)))?;
 
         rt.block_on(async {
             self.init().await
@@ -110,9 +98,7 @@ impl StockPanelPicker {
     /// Java-style stop that returns a Result instead of being async
     pub fn stop_sync(&self) -> Result<()> {
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| AppError::ThreadError {
-                details: format!("Failed to create async runtime: {}", e),
-            })?;
+            .map_err(|e| AppError::thread_error(format!("Failed to create async runtime: {}", e)))?;
 
         rt.block_on(async {
             self.stop_generation().await
@@ -153,9 +139,7 @@ impl StockPanelPicker {
     fn is_interrupted(&self) -> Result<bool> {
         // Check if shutdown signal was sent by trying to receive without blocking
         let sender_guard = self.shutdown_sender.lock()
-            .map_err(|e| AppError::ThreadSync {
-                message: format!("Failed to lock shutdown sender: {}", e),
-            })?;
+            .map_err(|e| AppError::thread_sync(format!("Failed to lock shutdown sender: {}", e)))?;
 
         // If sender is None, we're not interrupted
         // If sender exists but channel is closed, we might be interrupted
@@ -168,14 +152,10 @@ impl StockPanelPicker {
     pub fn interrupt(&self) -> Result<()> {
         // Send shutdown signal if available
         let sender_guard = self.shutdown_sender.lock()
-            .map_err(|e| AppError::ThreadSync {
-                message: format!("Failed to lock shutdown sender: {}", e),
-            })?;
+            .map_err(|e| AppError::thread_sync(format!("Failed to lock shutdown sender: {}", e)))?;
 
         if let Some(sender) = sender_guard.as_ref() {
-            sender.send(()).map_err(|_| AppError::StockGenerationInterrupted {
-                message: "Failed to send interrupt signal".to_string(),
-            })?;
+            sender.send(()).map_err(|_| AppError::stock_generation_interrupted("Failed to send interrupt signal"))?;
         }
 
         Ok(())
@@ -188,9 +168,7 @@ impl StockPanelPicker {
     pub fn get_stock_solution_java_style(&self, index: usize) -> Result<Option<StockSolution>> {
         // Check for interruption signal before starting (Java-style)
         if self.is_interrupted()? {
-            return Err(AppError::StockGenerationInterrupted {
-                message: "Thread was interrupted before operation".to_string(),
-            });
+            return Err(AppError::stock_generation_interrupted("Thread was interrupted before operation"));
         }
 
         // Use the blocking method with no timeout (like Java)

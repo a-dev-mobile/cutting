@@ -5,7 +5,7 @@
 use crate::{
     log_debug, log_info,
     models::{Solution, TileNode},
-    error::{AppError, Result},
+    errors::{AppError, Result},
     Status,
 };
 use std::{
@@ -131,9 +131,9 @@ impl CutListThread {
         // Update global solutions with thread safety
         {
             let mut all_solutions = self.all_solutions.lock()
-                .map_err(|_| AppError::ThreadSync { 
-                    message: "Failed to lock all_solutions".to_string() 
-                })?;
+                .map_err(|_| AppError::thread_sync(
+                    "Failed to lock all_solutions"
+                ))?;
             
             all_solutions.extend(current_solutions);
             self.sort_and_limit_solutions(&mut all_solutions, false)?;

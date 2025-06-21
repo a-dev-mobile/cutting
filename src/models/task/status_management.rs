@@ -4,7 +4,7 @@
 
 use crate::{log_info, log_warn, log_error};
 use crate::models::enums::Status;
-use crate::error::TaskError;
+use crate::errors::AppError;
 use super::Task;
 
 impl Task {
@@ -22,13 +22,13 @@ impl Task {
 
     /// Set the task status to running
     /// Returns Ok(()) if successful, Err if task is not in a valid state to start
-    pub fn set_running_status(&self) -> Result<(), TaskError> {
+    pub fn set_running_status(&self) -> Result<(), AppError> {
         let mut status = self.status.write().unwrap();
         if *status != Status::Queued {
-            return Err(TaskError::InvalidStatusTransition {
+            return Err(AppError::Task(crate::errors::TaskError::InvalidStatusTransition {
                 from: *status,
                 to: Status::Running,
-            });
+            }));
         }
         *status = Status::Running;
         log_info!("Task {} set to running status", self.id);
@@ -37,13 +37,13 @@ impl Task {
 
     /// Stop the task
     /// Returns Ok(()) if successful, Err if task is not running
-    pub fn stop(&self) -> Result<(), TaskError> {
+    pub fn stop(&self) -> Result<(), AppError> {
         let mut status = self.status.write().unwrap();
         if *status != Status::Running {
-            return Err(TaskError::InvalidStatusTransition {
+            return Err(AppError::Task(crate::errors::TaskError::InvalidStatusTransition {
                 from: *status,
                 to: Status::Finished, // Assuming stop means finished
-            });
+            }));
         }
         *status = Status::Finished;
         self.set_end_time();
@@ -53,13 +53,13 @@ impl Task {
 
     /// Terminate the task
     /// Returns Ok(()) if successful, Err if task is not running
-    pub fn terminate(&self) -> Result<(), TaskError> {
+    pub fn terminate(&self) -> Result<(), AppError> {
         let mut status = self.status.write().unwrap();
         if *status != Status::Running {
-            return Err(TaskError::InvalidStatusTransition {
+            return Err(AppError::Task(crate::errors::TaskError::InvalidStatusTransition {
                 from: *status,
                 to: Status::Terminated,
-            });
+            }));
         }
         *status = Status::Terminated;
         self.set_end_time();

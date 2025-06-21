@@ -1,5 +1,5 @@
 use crate::models::edge::Edge;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use crate::models::panel::Panel;
 
 impl Panel {
@@ -41,9 +41,7 @@ impl Panel {
         };
 
         let width_value: f64 = width_str.parse()
-            .map_err(|_| AppError::InvalidInput {
-                details: format!("Invalid width value: {}", width_str)
-            })?;
+            .map_err(|_| AppError::invalid_input(format!("Invalid width value: {}", width_str)))?;
 
         if width_value <= 0.0 {
             return Ok(false);
@@ -56,9 +54,7 @@ impl Panel {
         };
 
         let height_value: f64 = height_str.parse()
-            .map_err(|_| AppError::InvalidInput {
-                details: format!("Invalid height value: {}", height_str)
-            })?;
+            .map_err(|_| AppError::invalid_input(format!("Invalid height value: {}", height_str)))?;
 
         Ok(height_value > 0.0)
     }
@@ -66,24 +62,16 @@ impl Panel {
     /// Get width as a parsed f64 value
     pub fn width_as_f64(&self) -> Result<f64> {
         match &self.width {
-            Some(w) => w.parse().map_err(|_| AppError::InvalidInput {
-                details: format!("Invalid width value: {}", w)
-            }),
-            None => Err(AppError::InvalidInput {
-                details: "Width is not set".to_string()
-            }),
+            Some(w) => w.parse().map_err(|_| AppError::invalid_input(format!("Invalid width value: {}", w))),
+            None => Err(AppError::invalid_input("Width is not set")),
         }
     }
 
     /// Get height as a parsed f64 value
     pub fn height_as_f64(&self) -> Result<f64> {
         match &self.height {
-            Some(h) => h.parse().map_err(|_| AppError::InvalidInput {
-                details: format!("Invalid height value: {}", h)
-            }),
-            None => Err(AppError::InvalidInput {
-                details: "Height is not set".to_string()
-            }),
+            Some(h) => h.parse().map_err(|_| AppError::invalid_input(format!("Invalid height value: {}", h))),
+            None => Err(AppError::invalid_input("Height is not set")),
         }
     }
 

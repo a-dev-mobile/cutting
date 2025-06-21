@@ -21,7 +21,9 @@ path = "src/main.rs"
 [dependencies]
 # CLI & Async
 clap = { version = "4.5.40", features = ["derive", "color"] }
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.35", features = ["full", "rt-multi-thread"] }
+tokio-util = "0.7"
+async-trait = "0.1"
 anyhow = "1.0.98"
 thiserror = "2.0.12"
 
@@ -38,6 +40,18 @@ indicatif = "0.17"
 # Math & Algorithms
 num-traits = "0.2.19"
 rayon = "1.10.0"
+
+# Task management and concurrency
+uuid = { version = "1.0", features = ["v4"] }
+dashmap = "6.0"
+parking_lot = "0.12"
+atomic = "0.6"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Metrics and monitoring
+metrics = "0.23"
 
 # Optional: Performance monitoring
 mimalloc = { version = "0.1.47", optional = true }

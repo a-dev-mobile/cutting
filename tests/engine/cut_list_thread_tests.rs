@@ -7,7 +7,7 @@ use cutlist_optimizer_cli::{
     models::{Solution, TileDimensions, TileNode, Mosaic},
     stock::StockSolution,
     CutDirection, Status, Orientation,
-    error::AppError,
+    errors::AppError,
 };
 use std::{
     sync::{Arc, Mutex},
@@ -193,10 +193,13 @@ fn test_validation_configuration() {
     let result = thread.validate_configuration();
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
-            assert!(details.contains("No tiles provided"));
-        }
-        _ => panic!("Expected InvalidInput error"),
+        AppError::Core(core_err) => match core_err {
+            cutlist_optimizer_cli::errors::core::CoreError::InvalidInput { details } => {
+                assert!(details.contains("No tiles provided"));
+            }
+            _ => panic!("Expected InvalidInput error"),
+        },
+        _ => panic!("Expected Core error"),
     }
     
     // Add tiles but no stock solution - should fail
@@ -204,10 +207,13 @@ fn test_validation_configuration() {
     let result = thread.validate_configuration();
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
-            assert!(details.contains("Stock solution is required"));
-        }
-        _ => panic!("Expected InvalidInput error"),
+        AppError::Core(core_err) => match core_err {
+            cutlist_optimizer_cli::errors::core::CoreError::InvalidInput { details } => {
+                assert!(details.contains("Stock solution is required"));
+            }
+            _ => panic!("Expected InvalidInput error"),
+        },
+        _ => panic!("Expected Core error"),
     }
     
     // Add stock solution - should pass
@@ -238,10 +244,13 @@ fn test_validation_configuration() {
     let result = thread.validate_configuration();
     assert!(result.is_err());
     match result.unwrap_err() {
-        AppError::InvalidInput { details } => {
-            assert!(details.contains("invalid dimensions"));
-        }
-        _ => panic!("Expected InvalidInput error"),
+        AppError::Core(core_err) => match core_err {
+            cutlist_optimizer_cli::errors::core::CoreError::InvalidInput { details } => {
+                assert!(details.contains("invalid dimensions"));
+            }
+            _ => panic!("Expected InvalidInput error"),
+        },
+        _ => panic!("Expected Core error"),
     }
 }
 

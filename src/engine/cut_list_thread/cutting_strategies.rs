@@ -4,7 +4,7 @@
 
 use crate::{
     models::TileNode,
-    error::Result,
+    errors::Result,
 };
 
 use super::structs::CutListThread;

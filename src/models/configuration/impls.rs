@@ -1,6 +1,6 @@
 use super::structs::Configuration;
 use crate::comparator::OptimizationPriority;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use crate::models::performance_thresholds::PerformanceThresholds;
 use crate::constants::ConfigurationDefaults;
 
@@ -24,23 +24,17 @@ impl Configuration {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<()> {
         if self.cut_thickness < 0 {
-            return Err(AppError::InvalidConfiguration {
-                message: "Cut thickness cannot be negative".to_string(),
-            });
+            return Err(AppError::invalid_configuration("Cut thickness cannot be negative"));
         }
         
         if self.min_trim_dimension < 0 {
-            return Err(AppError::InvalidConfiguration {
-                message: "Min trim dimension cannot be negative".to_string(),
-            });
+            return Err(AppError::invalid_configuration("Min trim dimension cannot be negative"));
         }
         
         if !(ConfigurationDefaults::MIN_OPTIMIZATION_FACTOR..=ConfigurationDefaults::MAX_OPTIMIZATION_FACTOR).contains(&self.optimization_factor) {
-            return Err(AppError::InvalidConfiguration {
-                message: format!("Optimization factor must be between {} and {}", 
+            return Err(AppError::invalid_configuration(format!("Optimization factor must be between {} and {}", 
                     ConfigurationDefaults::MIN_OPTIMIZATION_FACTOR, 
-                    ConfigurationDefaults::MAX_OPTIMIZATION_FACTOR),
-            });
+                    ConfigurationDefaults::MAX_OPTIMIZATION_FACTOR)));
         }
         
         Ok(())

@@ -9,7 +9,7 @@ use crate::{log_debug, log_error};
 use crate::models::task::Task;
 use crate::stock::StockSolution;
 use crate::constants::StockConstants;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use super::StockPanelPicker;
 
 impl StockPanelPicker {
@@ -18,15 +18,11 @@ impl StockPanelPicker {
     /// This corresponds to the Java `init()` method that starts the background thread
     pub async fn init(&self) -> Result<()> {
         let mut generation_thread = self.generation_thread.lock().map_err(|_| {
-            AppError::ThreadError {
-                details: "Failed to acquire generation thread lock".to_string(),
-            }
+            AppError::thread_error("Failed to acquire generation thread lock")
         })?;
 
         if generation_thread.is_some() {
-            return Err(AppError::ThreadError {
-                details: "Generation thread already initialized".to_string(),
-            });
+            return Err(AppError::thread_error("Generation thread already initialized"));
         }
 
         let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel();
@@ -34,9 +30,7 @@ impl StockPanelPicker {
         // Store the shutdown sender
         {
             let mut sender_guard = self.shutdown_sender.lock().map_err(|_| {
-                AppError::ThreadError {
-                    details: "Failed to acquire shutdown sender lock".to_string(),
-                }
+                AppError::thread_error("Failed to acquire shutdown sender lock")
             })?;
             *sender_guard = Some(shutdown_tx);
         }
@@ -230,9 +224,7 @@ impl StockPanelPicker {
         // Send shutdown signal
         {
             let sender_guard = self.shutdown_sender.lock().map_err(|_| {
-                AppError::ThreadError {
-                    details: "Failed to acquire shutdown sender lock".to_string(),
-                }
+                AppError::thread_error("Failed to acquire shutdown sender lock")
             })?;
 
             if let Some(sender) = sender_guard.as_ref() {
@@ -243,9 +235,7 @@ impl StockPanelPicker {
         // Extract the handle without holding the lock across await
         let handle = {
             let mut generation_thread = self.generation_thread.lock().map_err(|_| {
-                AppError::ThreadError {
-                    details: "Failed to acquire generation thread lock".to_string(),
-                }
+                AppError::thread_error("Failed to acquire generation thread lock")
             })?;
             generation_thread.take()
         };

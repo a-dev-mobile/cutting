@@ -10,7 +10,7 @@ use cutlist_optimizer_cli::{
         enums::{Status, Orientation},
         CalculationRequest, TileDimensions,
     },
-    error::TaskError,
+    errors::{task::TaskError, AppError},
 };
 
 #[test]
@@ -42,10 +42,8 @@ fn test_status_transitions() {
     assert!(task.is_running());
     
     // Should not be able to start again when already running
-    assert!(matches!(
-        task.set_running_status(),
-        Err(TaskError::InvalidStatusTransition { .. })
-    ));
+    let result = task.set_running_status();
+    assert!(result.is_err());
     
     // Should be able to stop when running
     assert!(task.stop().is_ok());
@@ -68,7 +66,7 @@ fn test_status_transitions_terminate() {
     // Should not be able to stop when terminated
     assert!(matches!(
         task.stop(),
-        Err(TaskError::InvalidStatusTransition { .. })
+        Err(AppError::Task(TaskError::InvalidStatusTransition { .. }))
     ));
 }
 

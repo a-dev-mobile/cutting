@@ -146,7 +146,7 @@ mod builder_tests {
 mod core_implementation_tests {
     use super::*;
     use cutlist_optimizer_cli::models::TileDimensions;
-    use cutlist_optimizer_cli::error::Result;
+    use cutlist_optimizer_cli::errors::Result;
 
     fn create_test_picker() -> Result<StockPanelPicker> {
         let task = Arc::new(Task::new("test".to_string()));
@@ -216,7 +216,7 @@ mod core_implementation_tests {
 mod solution_retrieval_tests {
     use super::*;
     use cutlist_optimizer_cli::models::TileDimensions;
-    use cutlist_optimizer_cli::error::Result;
+    use cutlist_optimizer_cli::errors::Result;
 
     fn create_test_picker() -> Result<StockPanelPicker> {
         let task = Arc::new(Task::new("test".to_string()));
@@ -237,7 +237,7 @@ mod solution_retrieval_tests {
 mod thread_management_tests {
     use super::*;
     use cutlist_optimizer_cli::models::TileDimensions;
-    use cutlist_optimizer_cli::error::Result;
+    use cutlist_optimizer_cli::errors::Result;
 
     fn create_test_picker() -> Result<StockPanelPicker> {
         let task = Arc::new(Task::new("test".to_string()));

@@ -1,7 +1,7 @@
 //! Solution retrieval methods for StockPanelPicker
 
 use std::time::Duration;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use crate::stock::StockSolution;
 use crate::constants::StockConstants;
 use super::StockPanelPicker;
@@ -21,7 +21,7 @@ impl StockPanelPicker {
     pub fn get_stock_solution(&self, index: usize) -> Result<Option<StockSolution>> {
         // Check if thread is initialized
         if !self.is_initialized()? {
-            return Err(AppError::StockPanelPickerNotInitialized);
+            return Err(AppError::stock_panel_picker_not_initialized());
         }
 
         // Wait for solution to be available or generation to complete
@@ -29,9 +29,9 @@ impl StockPanelPicker {
             // Atomically check state and retrieve solution if available
             let (solution_available, solution) = {
                 let solutions = self.stock_solutions.lock()
-                    .map_err(|e| AppError::ThreadSync { 
-                        message: format!("Failed to lock stock solutions: {}", e) 
-                    })?;
+                    .map_err(|e| AppError::thread_sync(
+                        format!("Failed to lock stock solutions: {}", e)
+                    ))?;
 
                 if solutions.len() > index {
                     (true, Some(solutions[index].clone()))
@@ -45,9 +45,9 @@ impl StockPanelPicker {
                     // Update max retrieved index atomically
                     {
                         let mut max_idx = self.max_retrieved_idx.lock()
-                            .map_err(|e| AppError::ThreadSync { 
-                                message: format!("Failed to lock max retrieved index: {}", e) 
-                            })?;
+                            .map_err(|e| AppError::thread_sync(
+                                format!("Failed to lock max retrieved index: {}", e)
+                            ))?;
                         *max_idx = (*max_idx).max(index);
                     }
                     return Ok(Some(solution));
@@ -93,9 +93,9 @@ impl StockPanelPicker {
     /// This method returns immediately with whatever solutions are currently generated
     pub fn get_available_solutions(&self) -> Result<Vec<StockSolution>> {
         let solutions = self.stock_solutions.lock()
-            .map_err(|e| AppError::ThreadSync { 
-                message: format!("Failed to lock stock solutions: {}", e) 
-            })?;
+            .map_err(|e| AppError::thread_sync(
+                format!("Failed to lock stock solutions: {}", e)
+            ))?;
 
         Ok(solutions.clone())
     }

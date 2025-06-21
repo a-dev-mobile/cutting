@@ -20,12 +20,12 @@ pub mod engine;
 pub mod logging;
 pub mod stock;
 
-pub mod error;
+pub mod errors;
 pub mod models;
 pub mod utils;
 
 // Публичный API библиотеки
-pub use error::{AppError, Result};
+pub use errors::{AppError, Result};
 pub use models::{
     enums::{CutDirection, OptimizationPriority, Orientation, Status, StatusCode},
     Configuration,
@@ -36,7 +36,7 @@ pub use constants::MaterialConstants;
 // Основные типы для работы с библиотекой
 pub mod prelude {
     //! Основные типы и трейты для удобного импорта
-    pub use crate::error::{AppError, Result};
+    pub use crate::errors::{AppError, Result};
     pub use crate::models::{
         enums::{CutDirection, OptimizationPriority, Orientation, Status, StatusCode},
         Configuration,

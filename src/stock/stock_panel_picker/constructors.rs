@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 use crate::models::{task::Task, TileDimensions};
 use crate::stock::StockSolutionGenerator;
-use crate::error::{AppError, Result};
+use crate::errors::{AppError, Result};
 use super::{StockPanelPicker, StockPanelPickerBuilder};
 
 impl StockPanelPicker {
@@ -89,21 +89,15 @@ impl StockPanelPickerBuilder {
     /// Build the StockPanelPicker
     pub fn build(self) -> Result<StockPanelPicker> {
         let tiles_to_fit = self.tiles_to_fit.ok_or_else(|| {
-            AppError::InvalidInput {
-                details: "tiles_to_fit is required".to_string(),
-            }
+            AppError::invalid_input("tiles_to_fit is required")
         })?;
 
         let stock_tiles = self.stock_tiles.ok_or_else(|| {
-            AppError::InvalidInput {
-                details: "stock_tiles is required".to_string(),
-            }
+            AppError::invalid_input("stock_tiles is required")
         })?;
 
         let task = self.task.ok_or_else(|| {
-            AppError::InvalidInput {
-                details: "task is required".to_string(),
-            }
+            AppError::invalid_input("task is required")
         })?;
 
         StockPanelPicker::new(

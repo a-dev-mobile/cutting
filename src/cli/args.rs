@@ -1,6 +1,6 @@
 use crate::{
     cli::commands::{example_command, optimize_command, validate_command},
-    error::Result,
+    errors::Result,
     constants::ConfigurationDefaults,
 };
 use clap::{Parser, Subcommand};

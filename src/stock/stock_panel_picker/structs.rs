@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use tokio::sync::mpsc;
 use crate::models::{task::Task, TileDimensions};
 use crate::stock::{StockSolution, StockSolutionGenerator};
-use crate::error::Result;
+use crate::errors::Result;
 
 
 /// Result type for stock panel picker operations
