@@ -3,9 +3,17 @@ name = "cutlist-optimizer-cli"
 version = "0.1.0"
 edition = "2021"
 authors = ["Your Name <email@example.com>"]
-description = "CLI tool for optimizing material cutting layouts"
+description = "CLI tool and library for optimizing material cutting layouts"
 license = "MIT"
+keywords = ["optimization", "cutting", "materials", "cli"]
+categories = ["command-line-utilities", "algorithms"]
 
+# Библиотека
+[lib]
+name = "cutlist_optimizer_cli"
+path = "src/lib.rs"
+
+# CLI приложение
 [[bin]]
 name = "cutlist"
 path = "src/main.rs"

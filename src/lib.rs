@@ -2,14 +2,30 @@
 //! 
 //! This library provides algorithms and data structures for optimizing
 //! the layout of cuts when processing sheet materials like wood, metal, etc.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use cutlist_optimizer_cli::{models::Configuration, Result};
+//! 
+//! // Создание конфигурации для оптимизации
+//! let config = Configuration::default();
+//! ```
 
+// Внутренние модули
 pub mod cli;
 pub mod engine;
 pub mod error;
-// pub mod io;
 pub mod models;
 pub mod utils;
 
+// Публичный API библиотеки
 pub use error::{OptimizerError, Result};
-// pub use models::{Configuration, Solution, TileDimensions};
-// pub use engine::CutListOptimizerService;
+pub use models::{Configuration, TileDimensions, Orientation};
+
+// Основные типы для работы с библиотекой
+pub mod prelude {
+    //! Основные типы и трейты для удобного импорта
+    pub use crate::error::{OptimizerError, Result};
+    pub use crate::models::{Configuration, TileDimensions, Orientation};
+}

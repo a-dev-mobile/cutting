@@ -1,18 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
-
 use tracing_subscriber::{filter::EnvFilter, fmt, prelude::*};
 
-use crate::cli::args::Cli;
-
-mod cli;
-mod engine;
-mod error;
-// mod io;
-mod models;
-mod utils;
-
-
+// Используем библиотеку вместо объявления модулей
+use cutlist_optimizer_cli::cli::args::Cli;
 
 #[tokio::main]
 async fn main() -> Result<()> {

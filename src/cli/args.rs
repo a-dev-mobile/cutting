@@ -1,6 +1,6 @@
 use crate::{
     cli::commands::{example_command, optimize_command, validate_command},
-    error::{OptimizerError, Result},
+    error::Result,
 };
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
