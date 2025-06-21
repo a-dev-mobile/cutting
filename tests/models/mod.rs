@@ -1,1 +1,1 @@
-pub mod tile_tests;
+pub mod tile_dimensions_tests;
