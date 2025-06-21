@@ -69,8 +69,11 @@ impl StockSolution {
         self.stock_tile_dimensions.iter().map(|tile| tile.area() as i64).sum()
     }
 
-    /// Get a string representation of all tiles
-    pub fn to_string(&self) -> String {
+    /// Get a string representation of all tiles (Java-compatible method)
+    /// 
+    /// Note: This method provides Java-style toString() compatibility.
+    /// For Display trait usage, use format!("{}", solution) instead.
+    pub fn to_string_java(&self) -> String {
         self.stock_tile_dimensions
             .iter()
             .map(|tile| format!("[{}x{}]", tile.width, tile.height))
@@ -216,6 +219,6 @@ impl std::hash::Hash for StockSolution {
 
 impl std::fmt::Display for StockSolution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.to_string_java())
     }
 }

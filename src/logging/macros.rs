@@ -3,40 +3,40 @@
 // Реэкспорт базовых макросов tracing
 pub use tracing::{debug, error, info, trace, warn};
 
-/// Макрос для логирования начала операции
+/// Macro for logging operation start
 #[macro_export]
 macro_rules! log_operation_start {
     ($operation:expr) => {
-        tracing::info!("🚀 Начинаем: {}", $operation);
+        tracing::info!("🚀 Starting: {}", $operation);
     };
     ($operation:expr, $($arg:tt)*) => {
-        tracing::info!("🚀 Начинаем: {}", format!($operation, $($arg)*));
+        tracing::info!("🚀 Starting: {}", format!($operation, $($arg)*));
     };
 }
 
-/// Макрос для логирования успешного завершения операции
+/// Macro for logging successful operation completion
 #[macro_export]
 macro_rules! log_operation_success {
     ($operation:expr) => {
-        tracing::info!("✅ Завершено: {}", $operation);
+        tracing::info!("✅ Completed: {}", $operation);
     };
     ($operation:expr, $($arg:tt)*) => {
-        tracing::info!("✅ Завершено: {}", format!($operation, $($arg)*));
+        tracing::info!("✅ Completed: {}", format!($operation, $($arg)*));
     };
 }
 
-/// Макрос для логирования ошибки операции
+/// Macro for logging operation errors
 #[macro_export]
 macro_rules! log_operation_error {
     ($operation:expr, $error:expr) => {
-        tracing::error!("❌ Ошибка в {}: {}", $operation, $error);
+        tracing::error!("❌ Error in {}: {}", $operation, $error);
     };
     ($operation:expr, $error:expr, $($arg:tt)*) => {
-        tracing::error!("❌ Ошибка в {}: {}", format!($operation, $($arg)*), $error);
+        tracing::error!("❌ Error in {}: {}", format!($operation, $($arg)*), $error);
     };
 }
 
-/// Макрос для логирования прогресса
+/// Macro for logging progress
 #[macro_export]
 macro_rules! log_progress {
     ($message:expr) => {
@@ -47,7 +47,7 @@ macro_rules! log_progress {
     };
 }
 
-/// Макрос для логирования результатов
+/// Macro for logging results
 #[macro_export]
 macro_rules! log_result {
     ($message:expr) => {
@@ -58,7 +58,7 @@ macro_rules! log_result {
     };
 }
 
-/// Макрос для логирования критических ошибок
+/// Macro for logging critical errors
 #[macro_export]
 macro_rules! log_fatal {
     ($message:expr) => {
@@ -69,7 +69,7 @@ macro_rules! log_fatal {
     };
 }
 
-/// Макрос для логирования информации
+/// Macro for logging information
 #[macro_export]
 macro_rules! log_info {
     ($message:expr) => {
@@ -80,35 +80,35 @@ macro_rules! log_info {
     };
 }
 
-/// Макрос для логирования ошибок
+/// Macro for logging errors
 #[macro_export]
 macro_rules! log_error {
     ($message:expr) => {
-        tracing::error!("❌ {}", $message);
+        tracing::error!("❌ {}", $message)
     };
     ($message:expr, $($arg:tt)*) => {
-        tracing::error!("❌ {}", format!($message, $($arg)*));
+        tracing::error!("❌ {}", format!($message, $($arg)*))
     };
 }
 
-/// Макрос для логирования предупреждений
+/// Macro for logging warnings
 #[macro_export]
 macro_rules! log_warn {
     ($message:expr) => {
-        tracing::warn!("⚠️ {}", $message);
+        tracing::warn!("⚠️ {}", $message)
     };
     ($message:expr, $($arg:tt)*) => {
-        tracing::warn!("⚠️ {}", format!($message, $($arg)*));
+        tracing::warn!("⚠️ {}", format!($message, $($arg)*))
     };
 }
 
-/// Макрос для логирования отладочной информации
+/// Macro for logging debug information
 #[macro_export]
 macro_rules! log_debug {
     ($message:expr) => {
-        tracing::debug!("🐛 {}", $message);
+        tracing::debug!("🐛 {}", $message)
     };
     ($message:expr, $($arg:tt)*) => {
-        tracing::debug!("🐛 {}", format!($message, $($arg)*));
+        tracing::debug!("🐛 {}", format!($message, $($arg)*))
     };
 }

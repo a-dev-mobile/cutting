@@ -78,20 +78,20 @@ impl StockPanelPicker {
                 break;
             }
 
-            // Check if we need to generate more solutions
+            // Atomically check if we need to generate more solutions
             let should_generate = {
                 let solutions_guard = match stock_solutions.lock() {
                     Ok(guard) => guard,
-                    Err(_) => {
-                        log_error!("Failed to acquire stock solutions lock");
+                    Err(e) => {
+                        log_error!("Failed to acquire stock solutions lock: {}", e);
                         break;
                     }
                 };
 
                 let max_idx_guard = match max_retrieved_idx.lock() {
                     Ok(guard) => guard,
-                    Err(_) => {
-                        log_error!("Failed to acquire max retrieved index lock");
+                    Err(e) => {
+                        log_error!("Failed to acquire max retrieved index lock: {}", e);
                         break;
                     }
                 };
@@ -108,8 +108,8 @@ impl StockPanelPicker {
                 let new_solution = {
                     let mut generator_guard = match stock_solution_generator.lock() {
                         Ok(guard) => guard,
-                        Err(_) => {
-                            log_error!("Failed to acquire stock solution generator lock");
+                        Err(e) => {
+                            log_error!("Failed to acquire stock solution generator lock: {}", e);
                             break;
                         }
                     };
@@ -122,12 +122,12 @@ impl StockPanelPicker {
                 };
 
                 if let Some(solution) = new_solution {
-                    // Add the solution to our collection
-                    {
+                    // Add the solution to our collection atomically
+                    let solutions_count = {
                         let mut solutions_guard = match stock_solutions.lock() {
                             Ok(guard) => guard,
-                            Err(_) => {
-                                log_error!("Failed to acquire stock solutions lock for adding");
+                            Err(e) => {
+                                log_error!("Failed to acquire stock solutions lock for adding: {}", e);
                                 break;
                             }
                         };
@@ -141,32 +141,45 @@ impl StockPanelPicker {
                             solutions_guard.push(sorted_solution);
                         }
 
+                        let count = solutions_guard.len();
                         log_debug!(
                             "Added solution idx[{}] with [{}] panels, area[{}] to stack",
-                            solutions_guard.len() - 1,
+                            count - 1,
                             solution.get_stock_tile_dimensions().len(),
                             solution.get_total_area()
                         );
-                    }
+                        count
+                    };
 
                     last_generated_solution = Some(solution);
+
+                    // Check termination conditions after adding solution
+                    if task.has_solution_all_fit() && solutions_count >= Self::MIN_STOCK_SOLUTIONS_TO_GENERATE_WITH_ALL_FIT_SOLUTION {
+                        log_debug!(
+                            "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - Task has already an all fit solution",
+                            solutions_count
+                        );
+                        break;
+                    }
                 } else {
                     last_generated_solution = None;
+                    log_debug!("No more stock solutions can be generated");
+                    break;
                 }
             } else {
                 let (solutions_count, max_idx) = {
                     let solutions_guard = match stock_solutions.lock() {
                         Ok(guard) => guard,
-                        Err(_) => {
-                            log_error!("Failed to acquire stock solutions lock for logging");
+                        Err(e) => {
+                            log_error!("Failed to acquire stock solutions lock for logging: {}", e);
                             break;
                         }
                     };
 
                     let max_idx_guard = match max_retrieved_idx.lock() {
                         Ok(guard) => guard,
-                        Err(_) => {
-                            log_error!("Failed to acquire max retrieved index lock for logging");
+                        Err(e) => {
+                            log_error!("Failed to acquire max retrieved index lock for logging: {}", e);
                             break;
                         }
                     };
@@ -178,48 +191,36 @@ impl StockPanelPicker {
                     "No need to generate new candidate stock solution: maxRetrievedIdx[{}] stockSolutions[{}]",
                     max_idx, solutions_count
                 );
+
+                // Sleep if we have enough solutions
+                if solutions_count > Self::MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE {
+                    sleep(Duration::from_millis(1000)).await;
+                }
             }
 
-            // Sleep if we have enough solutions
-            let solutions_count = {
-                let solutions_guard = match stock_solutions.lock() {
-                    Ok(guard) => guard,
-                    Err(_) => {
-                        log_error!("Failed to acquire stock solutions lock for count check");
-                        break;
-                    }
-                };
-                solutions_guard.len()
-            };
-
-            if solutions_count > Self::MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE {
-                sleep(Duration::from_millis(1000)).await;
-            }
-
-            // Check termination conditions
-            if last_generated_solution.is_none() {
-                log_debug!(
-                    "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - There are no more available stock solutions",
-                    solutions_count
-                );
-                break;
-            }
-
+            // Check task termination conditions
             if !task.is_running() {
+                let solutions_count = stock_solutions.lock()
+                    .map(|guard| guard.len())
+                    .unwrap_or(0);
                 log_debug!(
-                    "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - Task has no longer running status",
+                    "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - Task is no longer running",
                     solutions_count
                 );
                 break;
             }
+        }
 
-            if task.has_solution_all_fit() && solutions_count >= Self::MIN_STOCK_SOLUTIONS_TO_GENERATE_WITH_ALL_FIT_SOLUTION {
-                log_debug!(
-                    "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - Task has already an all fit solution",
-                    solutions_count
-                );
-                break;
-            }
+        // Final logging
+        let final_count = stock_solutions.lock()
+            .map(|guard| guard.len())
+            .unwrap_or(0);
+        
+        if last_generated_solution.is_none() {
+            log_debug!(
+                "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - No more available stock solutions",
+                final_count
+            );
         }
     }
 
@@ -238,14 +239,18 @@ impl StockPanelPicker {
             }
         }
 
-        // Wait for the thread to finish
-        let mut generation_thread = self.generation_thread.lock().map_err(|_| {
-            AppError::ThreadError {
-                details: "Failed to acquire generation thread lock".to_string(),
-            }
-        })?;
+        // Extract the handle without holding the lock across await
+        let handle = {
+            let mut generation_thread = self.generation_thread.lock().map_err(|_| {
+                AppError::ThreadError {
+                    details: "Failed to acquire generation thread lock".to_string(),
+                }
+            })?;
+            generation_thread.take()
+        };
 
-        if let Some(handle) = generation_thread.take() {
+        // Now await the handle without holding any locks
+        if let Some(handle) = handle {
             match handle.await {
                 Ok(_) => log_debug!("Generation thread stopped successfully"),
                 Err(e) => log_error!("Generation thread panicked: {:?}", e),

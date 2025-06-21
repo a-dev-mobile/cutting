@@ -1,7 +1,7 @@
 //! Core implementation methods for StockPanelPicker
 
 use std::sync::Arc;
-use crate::error::{AppError, Result};
+use crate::{log_debug, error::{AppError, Result}};
 use super::{StockPanelPicker, StockPanelPickerStats, SolutionSortConfig};
 
 impl StockPanelPicker {
@@ -44,6 +44,7 @@ impl StockPanelPicker {
     /// Sort stock solutions according to the provided configuration
     /// 
     /// This corresponds to the Java method: `sortStockSolutions()`
+    /// Note: The Java version silently ignores sorting exceptions, this version returns errors
     pub fn sort_stock_solutions(&self, config: &SolutionSortConfig) -> Result<()> {
         let mut solutions = self.stock_solutions.lock()
             .map_err(|e| AppError::ThreadSync { 
@@ -51,6 +52,7 @@ impl StockPanelPicker {
             })?;
 
         if config.sort_by_area {
+            // Use stable sort to maintain order for equal elements
             solutions.sort_by(|a, b| {
                 let area_a = a.get_total_area();
                 let area_b = b.get_total_area();
@@ -63,6 +65,8 @@ impl StockPanelPicker {
             });
         }
 
+        log_debug!("Sorted {} stock solutions by area (ascending: {})", 
+                  solutions.len(), config.ascending);
         Ok(())
     }
 
@@ -71,6 +75,60 @@ impl StockPanelPicker {
     /// This matches the Java implementation which sorts by smallest area first
     pub fn sort_stock_solutions_default(&self) -> Result<()> {
         self.sort_stock_solutions(&SolutionSortConfig::default())
+    }
+
+    /// Sort stock solutions with Java-compatible behavior
+    /// 
+    /// This method replicates the exact Java sorting behavior, including:
+    /// - Potential integer overflow when casting long to int
+    /// - Silent error handling (ignores sorting exceptions)
+    /// 
+    /// This corresponds exactly to the Java method: `sortStockSolutions()`
+    pub fn sort_stock_solutions_java_compatible(&self) -> Result<()> {
+        let mut solutions = self.stock_solutions.lock()
+            .map_err(|e| AppError::ThreadSync { 
+                message: format!("Failed to lock stock solutions for sorting: {}", e) 
+            })?;
+
+        // Java-compatible sorting with potential overflow behavior
+        // Java code: return (int) (stockSolution.getTotalArea() - stockSolution2.getTotalArea());
+        solutions.sort_by(|a, b| {
+            let area_a = a.get_total_area();
+            let area_b = b.get_total_area();
+            
+            // Mimic Java's (int) cast behavior which can overflow
+            let diff = area_a.saturating_sub(area_b);
+            
+            // Java's int cast would overflow for values outside i32 range
+            if diff > i32::MAX as i64 {
+                // Large positive difference becomes negative after overflow
+                std::cmp::Ordering::Less
+            } else if diff < i32::MIN as i64 {
+                // Large negative difference becomes positive after overflow  
+                std::cmp::Ordering::Greater
+            } else {
+                // Normal case - no overflow
+                (diff as i32).cmp(&0)
+            }
+        });
+
+        log_debug!("Java-compatible sorted {} stock solutions by area", solutions.len());
+        Ok(())
+    }
+
+    /// Sort stock solutions with Java-style silent error handling
+    /// 
+    /// This method exactly matches Java's behavior:
+    /// ```java
+    /// try {
+    ///     Collections.sort(this.stockSolutions, comparator);
+    /// } catch (Exception unused) {
+    ///     // Silently ignore sorting exceptions
+    /// }
+    /// ```
+    pub fn sort_stock_solutions_java_style(&self) {
+        // Match Java's silent exception handling - ignore all errors
+        let _ = self.sort_stock_solutions_java_compatible();
     }
 
     /// Check if the picker has been initialized (thread started)

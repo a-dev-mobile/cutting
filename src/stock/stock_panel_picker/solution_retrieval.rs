@@ -25,30 +25,37 @@ impl StockPanelPicker {
 
         // Wait for solution to be available or generation to complete
         loop {
-            let solution_count = self.solution_count()?;
-            let is_generating = self.is_generating()?;
-
-            // If we have enough solutions, return the requested one
-            if solution_count > index {
+            // Atomically check state and retrieve solution if available
+            let (solution_available, solution) = {
                 let solutions = self.stock_solutions.lock()
                     .map_err(|e| AppError::ThreadSync { 
                         message: format!("Failed to lock stock solutions: {}", e) 
                     })?;
 
-                if let Some(solution) = solutions.get(index) {
-                    // Update max retrieved index
-                    let mut max_idx = self.max_retrieved_idx.lock()
-                        .map_err(|e| AppError::ThreadSync { 
-                            message: format!("Failed to lock max retrieved index: {}", e) 
-                        })?;
-                    *max_idx = (*max_idx).max(index);
+                if solutions.len() > index {
+                    (true, Some(solutions[index].clone()))
+                } else {
+                    (false, None)
+                }
+            };
 
-                    return Ok(Some(solution.clone()));
+            if solution_available {
+                if let Some(solution) = solution {
+                    // Update max retrieved index atomically
+                    {
+                        let mut max_idx = self.max_retrieved_idx.lock()
+                            .map_err(|e| AppError::ThreadSync { 
+                                message: format!("Failed to lock max retrieved index: {}", e) 
+                            })?;
+                        *max_idx = (*max_idx).max(index);
+                    }
+                    return Ok(Some(solution));
                 }
             }
 
-            // If generation is complete and we don't have enough solutions, return None
-            if !is_generating && solution_count <= index {
+            // Check if generation is still active
+            let is_generating = self.is_generating()?;
+            if !is_generating {
                 crate::log_debug!("No more possible stock solutions");
                 return Ok(None);
             }

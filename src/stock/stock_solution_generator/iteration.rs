@@ -29,7 +29,7 @@ impl StockSolutionGenerator {
             let mut current_index = 0;
 
             while current_index < self.stock_tiles.len() {
-                let old_index = current_index;
+                let _old_index = current_index;
                 
                 // Try recursive call
                 if let Some(solution) = self.iterate(
