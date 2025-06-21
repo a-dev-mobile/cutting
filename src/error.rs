@@ -75,6 +75,22 @@ pub enum AppError {
 
     #[error("Stock solution computation exceeded reasonable limits")]
     StockComputationLimitExceeded,
+
+    // Stock panel picker errors
+    #[error("Stock panel picker thread not initialized")]
+    StockPanelPickerNotInitialized,
+
+    #[error("Stock solution generation interrupted: {message}")]
+    StockGenerationInterrupted { message: String },
+
+    #[error("No more stock solutions available")]
+    NoMoreStockSolutions,
+
+    #[error("Stock panel picker thread error: {message}")]
+    StockPanelPickerThread { message: String },
+
+    #[error("Thread error: {details}")]
+    ThreadError { details: String },
 }
 
 /// Task-specific error type

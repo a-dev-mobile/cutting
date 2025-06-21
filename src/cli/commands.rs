@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use crate::error::{AppError, Result};
-use crate::logging::{log_info, log_operation_start, log_operation_success, log_operation_error};
+use crate::logging::{log_info, log_operation_start, log_operation_success};
 /// Execute the optimize command
 pub async fn optimize_command(
     input: PathBuf,

@@ -1,4 +1,4 @@
-use super::structs::{StockSolutionGenerator, StockSolutionConfig};
+use super::structs::StockSolutionGenerator;
 use crate::error::AppError;
 use crate::models::TileDimensions;
 use crate::stock::StockSolution;
