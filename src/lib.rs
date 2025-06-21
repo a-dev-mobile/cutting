@@ -8,7 +8,7 @@ pub mod engine;
 pub mod error;
 // pub mod io;
 pub mod models;
-// pub mod utils;
+pub mod utils;
 
 pub use error::{OptimizerError, Result};
 // pub use models::{Configuration, Solution, TileDimensions};
