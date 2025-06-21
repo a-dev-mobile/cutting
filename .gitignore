@@ -12,3 +12,14 @@ src/bin/*
 *.json
 **.html
 **.md
+src copy/*
+/target
+**/*.rs.bk
+*.pdb
+.env
+.vscode/
+.idea/
+*.log
+/test_outputs/
+/benchmark_results/
+______tests/*
