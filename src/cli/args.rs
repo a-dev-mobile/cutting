@@ -1,6 +1,7 @@
 use crate::{
     cli::commands::{example_command, optimize_command, validate_command},
     error::Result,
+    stock::constants::ConfigurationDefaults,
 };
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -39,15 +40,15 @@ pub enum Commands {
         config: Option<PathBuf>,
 
         /// Cut thickness (kerf) in mm
-        #[arg(long, default_value = "3")]
+        #[arg(long, default_value_t = ConfigurationDefaults::DEFAULT_CUT_THICKNESS)]
         cut_thickness: i32,
 
         /// Minimum trim dimension in mm
-        #[arg(long, default_value = "10")]
+        #[arg(long, default_value_t = ConfigurationDefaults::DEFAULT_MIN_TRIM_DIMENSION)]
         min_trim: i32,
 
         /// Optimization accuracy (1-10)
-        #[arg(long, default_value = "5")]
+        #[arg(long, default_value_t = ConfigurationDefaults::DEFAULT_OPTIMIZATION_FACTOR)]
         accuracy: i32,
     },
 

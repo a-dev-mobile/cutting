@@ -1,12 +1,13 @@
 use super::structs::PerformanceThresholds;
 use crate::error::{AppError, Result};
+use crate::stock::constants::PerformanceConstants;
 
 impl Default for PerformanceThresholds {
     fn default() -> Self {
         Self {
             max_simultaneous_tasks: 1, // Matches Java default
             max_simultaneous_threads: num_cpus::get(),
-            thread_check_interval: 1000,
+            thread_check_interval: PerformanceConstants::THREAD_CHECK_INTERVAL_MS,
         }
     }
 }

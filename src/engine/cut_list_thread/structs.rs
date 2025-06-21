@@ -7,7 +7,7 @@ use crate::{
         Solution, TileDimensions,
         task::Task,
     },
-    stock::StockSolution,
+    stock::{StockSolution, constants::ConfigurationDefaults},
     CutDirection, Status,
 };
 use std::{
@@ -55,7 +55,7 @@ impl CutListThread {
     /// Create a new CutListThread with default configuration
     pub fn new() -> Self {
         Self {
-            accuracy_factor: 100,
+            accuracy_factor: ConfigurationDefaults::DEFAULT_ACCURACY_FACTOR as usize,
             cut_thickness: 0,
             min_trim_dimension: 0,
             first_cut_orientation: CutDirection::Both,

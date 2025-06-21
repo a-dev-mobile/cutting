@@ -1,5 +1,6 @@
 use crate::models::TileDimensions;
 use crate::stock::StockSolution;
+use crate::stock::constants::PerformanceConstants;
 use std::collections::HashSet;
 
 /// Configuration and state for generating stock solutions
@@ -50,7 +51,7 @@ pub struct StockSolutionConfig {
 impl Default for StockSolutionConfig {
     fn default() -> Self {
         Self {
-            max_stock_solution_length: 1000,
+            max_stock_solution_length: PerformanceConstants::DEFAULT_MAX_STOCK_SOLUTION_LENGTH,
         }
     }
 }

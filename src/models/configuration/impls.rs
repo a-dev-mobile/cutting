@@ -2,14 +2,15 @@ use super::structs::Configuration;
 use crate::comparator::OptimizationPriority;
 use crate::error::{AppError, Result};
 use crate::models::performance_thresholds::PerformanceThresholds;
+use crate::stock::constants::ConfigurationDefaults;
 
 impl Default for Configuration {
     fn default() -> Self {
         Self {
-            cut_thickness: 3,
-            min_trim_dimension: 10,
+            cut_thickness: ConfigurationDefaults::DEFAULT_CUT_THICKNESS,
+            min_trim_dimension: ConfigurationDefaults::DEFAULT_MIN_TRIM_DIMENSION,
             consider_orientation: true,
-            optimization_factor: 5,
+            optimization_factor: ConfigurationDefaults::DEFAULT_OPTIMIZATION_FACTOR,
             optimization_priority: OptimizationPriority::LeastWastedArea,
             use_single_stock_unit: false,
             units: "mm".to_string(),
@@ -34,9 +35,11 @@ impl Configuration {
             });
         }
         
-        if !(1..=10).contains(&self.optimization_factor) {
+        if !(ConfigurationDefaults::MIN_OPTIMIZATION_FACTOR..=ConfigurationDefaults::MAX_OPTIMIZATION_FACTOR).contains(&self.optimization_factor) {
             return Err(AppError::InvalidConfiguration {
-                message: "Optimization factor must be between 1 and 10".to_string(),
+                message: format!("Optimization factor must be between {} and {}", 
+                    ConfigurationDefaults::MIN_OPTIMIZATION_FACTOR, 
+                    ConfigurationDefaults::MAX_OPTIMIZATION_FACTOR),
             });
         }
         

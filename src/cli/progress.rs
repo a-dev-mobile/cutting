@@ -2,6 +2,7 @@
 
 use std::time::{Duration, Instant};
 use crate::logging::{log_info, log_progress};
+use crate::stock::constants::PerformanceConstants;
 
 /// A simple progress reporter for long-running operations
 pub struct ProgressReporter {
@@ -61,7 +62,7 @@ impl ProgressReporter {
         let now = Instant::now();
         
         // Only update display every 100ms to avoid spam
-        if now.duration_since(self.last_update) < Duration::from_millis(100) {
+        if now.duration_since(self.last_update) < Duration::from_millis(PerformanceConstants::PROGRESS_UPDATE_INTERVAL_MS) {
             return;
         }
         
