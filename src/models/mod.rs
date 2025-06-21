@@ -8,6 +8,7 @@ pub mod performance_thresholds;
 // pub mod task;
 pub mod tile;
 pub mod tile_dimensions;
+pub mod tile_node;
 
 // pub use calculation::{CalculationRequest, CalculationResponse};
 pub use configuration::Configuration;
@@ -18,3 +19,4 @@ pub use performance_thresholds::PerformanceThresholds;
 // pub use task::{Task, TaskStatus, TaskStatusResponse};
 pub use tile::Tile;
 pub use tile_dimensions::{Orientation, TileDimensions};
+pub use tile_node::TileNode;

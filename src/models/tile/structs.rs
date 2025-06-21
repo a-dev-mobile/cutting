@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use crate::models::TileDimensions;
 
 /// Represents a rectangular tile with coordinates defining its position and boundaries
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
