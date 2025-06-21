@@ -4,7 +4,7 @@
 
 use crate::{
     models::Solution,
-    error::{OptimizerError, Result},
+    error::{AppError, Result},
 };
 use std::collections::HashSet;
 
@@ -32,35 +32,35 @@ impl CutListThread {
     pub fn validate_configuration(&self) -> Result<()> {
         // Validate tiles
         if self.tiles.is_empty() {
-            return Err(OptimizerError::InvalidInput { 
+            return Err(AppError::InvalidInput { 
                 details: "No tiles provided for optimization".to_string() 
             });
         }
 
         // Validate cut thickness
         if self.cut_thickness < 0 {
-            return Err(OptimizerError::InvalidInput {
+            return Err(AppError::InvalidInput {
                 details: "Cut thickness cannot be negative".to_string()
             });
         }
 
         // Validate min trim dimension
         if self.min_trim_dimension < 0 {
-            return Err(OptimizerError::InvalidInput {
+            return Err(AppError::InvalidInput {
                 details: "Minimum trim dimension cannot be negative".to_string()
             });
         }
 
         // Validate accuracy factor
         if self.accuracy_factor == 0 {
-            return Err(OptimizerError::InvalidInput {
+            return Err(AppError::InvalidInput {
                 details: "Accuracy factor must be greater than zero".to_string()
             });
         }
 
         // Validate stock solution
         if self.stock_solution.is_none() {
-            return Err(OptimizerError::InvalidInput {
+            return Err(AppError::InvalidInput {
                 details: "Stock solution is required".to_string()
             });
         }
@@ -68,7 +68,7 @@ impl CutListThread {
         // Validate tile dimensions
         for (index, tile) in self.tiles.iter().enumerate() {
             if tile.width <= 0 || tile.height <= 0 {
-                return Err(OptimizerError::InvalidInput {
+                return Err(AppError::InvalidInput {
                     details: format!("Tile {} has invalid dimensions: {}x{}", 
                                    index, tile.width, tile.height)
                 });

@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use crate::error::{OptimizerError, Result};
+use crate::error::{AppError, Result};
 use crate::logging::{log_info, log_operation_start, log_operation_success, log_operation_error};
 /// Execute the optimize command
 pub async fn optimize_command(
@@ -23,13 +23,13 @@ pub async fn optimize_command(
     // TODO: Implement actual optimization logic
     // For now, just validate that the input file exists
     if !input.exists() {
-        return Err(OptimizerError::InvalidInput {
+        return Err(AppError::InvalidInput {
             details: format!("Input file does not exist: {:?}", input),
         });
     }
     /* 
     
-             return Err(OptimizerError::InvalidConfiguration {
+             return Err(AppError::InvalidConfiguration {
                 message: "Cut thickness cannot be negative".to_string(),
             });
      */
@@ -43,7 +43,7 @@ pub async fn validate_command(input: PathBuf) -> Result<()> {
     log_operation_start!("Validating input file: {:?}", input);
     
     if !input.exists() {
-        return Err(OptimizerError::InvalidInput {
+        return Err(AppError::InvalidInput {
             details: format!("Input file does not exist: {:?}", input),
         });
     }
@@ -60,7 +60,7 @@ pub async fn validate_command(input: PathBuf) -> Result<()> {
             // TODO: Validate JSON structure
         }
         _ => {
-            return Err(OptimizerError::InvalidInput {
+            return Err(AppError::InvalidInput {
                 details: "Unsupported file format. Expected .csv or .json".to_string(),
             });
         }
@@ -112,7 +112,7 @@ pub async fn example_command(format: String) -> Result<()> {
             log_info!("cutlist optimize -i input.json -o output.json");
         }
         _ => {
-            return Err(OptimizerError::InvalidInput {
+            return Err(AppError::InvalidInput {
                 details: format!("Unsupported format: {}. Use 'csv' or 'json'", format),
             });
         }

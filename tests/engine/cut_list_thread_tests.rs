@@ -7,7 +7,7 @@ use cutlist_optimizer_cli::{
     models::{Solution, TileDimensions, TileNode, Mosaic},
     stock::StockSolution,
     CutDirection, Status, Orientation,
-    error::OptimizerError,
+    error::AppError,
 };
 use std::{
     sync::{Arc, Mutex},
@@ -193,7 +193,7 @@ fn test_validation_configuration() {
     let result = thread.validate_configuration();
     assert!(result.is_err());
     match result.unwrap_err() {
-        OptimizerError::InvalidInput { details } => {
+        AppError::InvalidInput { details } => {
             assert!(details.contains("No tiles provided"));
         }
         _ => panic!("Expected InvalidInput error"),
@@ -204,7 +204,7 @@ fn test_validation_configuration() {
     let result = thread.validate_configuration();
     assert!(result.is_err());
     match result.unwrap_err() {
-        OptimizerError::InvalidInput { details } => {
+        AppError::InvalidInput { details } => {
             assert!(details.contains("Stock solution is required"));
         }
         _ => panic!("Expected InvalidInput error"),
@@ -238,7 +238,7 @@ fn test_validation_configuration() {
     let result = thread.validate_configuration();
     assert!(result.is_err());
     match result.unwrap_err() {
-        OptimizerError::InvalidInput { details } => {
+        AppError::InvalidInput { details } => {
             assert!(details.contains("invalid dimensions"));
         }
         _ => panic!("Expected InvalidInput error"),

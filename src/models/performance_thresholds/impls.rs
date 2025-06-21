@@ -1,5 +1,5 @@
 use super::structs::PerformanceThresholds;
-use crate::error::{OptimizerError, Result};
+use crate::error::{AppError, Result};
 
 impl Default for PerformanceThresholds {
     fn default() -> Self {
@@ -68,19 +68,19 @@ impl PerformanceThresholds {
     /// Validate performance thresholds
     pub fn validate(&self) -> Result<()> {
         if self.max_simultaneous_tasks == 0 {
-            return Err(OptimizerError::InvalidConfiguration {
+            return Err(AppError::InvalidConfiguration {
                 message: "Maximum simultaneous tasks must be greater than 0".to_string(),
             });
         }
 
         if self.max_simultaneous_threads == 0 {
-            return Err(OptimizerError::InvalidConfiguration {
+            return Err(AppError::InvalidConfiguration {
                 message: "Maximum simultaneous threads must be greater than 0".to_string(),
             });
         }
 
         if self.thread_check_interval == 0 {
-            return Err(OptimizerError::InvalidConfiguration {
+            return Err(AppError::InvalidConfiguration {
                 message: "Thread check interval must be greater than 0".to_string(),
             });
         }

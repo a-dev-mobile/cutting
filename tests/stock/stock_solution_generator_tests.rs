@@ -1,7 +1,7 @@
 use cutlist_optimizer_cli::models::TileDimensions;
 use cutlist_optimizer_cli::stock::{StockSolution, StockSolutionGenerator};
 use cutlist_optimizer_cli::models::enums::StockSolutionResult;
-use cutlist_optimizer_cli::error::OptimizerError;
+use cutlist_optimizer_cli::error::AppError;
 
 #[test]
 fn test_stock_solution_generator_creation() {
@@ -37,7 +37,7 @@ fn test_empty_tiles_to_fit_error() {
     let stock_tiles = vec![TileDimensions::new(10, 200, 100)];
 
     let result = StockSolutionGenerator::new(tiles_to_fit, stock_tiles, None);
-    assert!(matches!(result.unwrap_err(), OptimizerError::NoTilesToFit));
+    assert!(matches!(result.unwrap_err(), AppError::NoTilesToFit));
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn test_empty_stock_tiles_error() {
     let stock_tiles = vec![];
 
     let result = StockSolutionGenerator::new(tiles_to_fit, stock_tiles, None);
-    assert!(matches!(result.unwrap_err(), OptimizerError::NoStockTiles));
+    assert!(matches!(result.unwrap_err(), AppError::NoStockTiles));
 }
 
 #[test]
@@ -181,16 +181,16 @@ fn test_dimension_constraints() {
 
 #[test]
 fn test_optimizer_error_display() {
-    let error = OptimizerError::NoStockTiles;
+    let error = AppError::NoStockTiles;
     assert_eq!(error.to_string(), "No stock tiles provided");
     
-    let error = OptimizerError::NoTilesToFit;
+    let error = AppError::NoTilesToFit;
     assert_eq!(error.to_string(), "No tiles to fit provided");
     
-    let error = OptimizerError::InvalidConfiguration { message: "test message".to_string() };
+    let error = AppError::InvalidConfiguration { message: "test message".to_string() };
     assert_eq!(error.to_string(), "Invalid configuration: test message");
     
-    let error = OptimizerError::StockComputationLimitExceeded;
+    let error = AppError::StockComputationLimitExceeded;
     assert_eq!(error.to_string(), "Stock solution computation exceeded reasonable limits");
 }
 

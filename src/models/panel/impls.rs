@@ -1,5 +1,5 @@
 use crate::models::edge::Edge;
-use crate::error::{OptimizerError, Result};
+use crate::error::{AppError, Result};
 use crate::models::panel::Panel;
 
 impl Panel {
@@ -41,7 +41,7 @@ impl Panel {
         };
 
         let width_value: f64 = width_str.parse()
-            .map_err(|_| OptimizerError::InvalidInput {
+            .map_err(|_| AppError::InvalidInput {
                 details: format!("Invalid width value: {}", width_str)
             })?;
 
@@ -56,7 +56,7 @@ impl Panel {
         };
 
         let height_value: f64 = height_str.parse()
-            .map_err(|_| OptimizerError::InvalidInput {
+            .map_err(|_| AppError::InvalidInput {
                 details: format!("Invalid height value: {}", height_str)
             })?;
 
@@ -66,10 +66,10 @@ impl Panel {
     /// Get width as a parsed f64 value
     pub fn width_as_f64(&self) -> Result<f64> {
         match &self.width {
-            Some(w) => w.parse().map_err(|_| OptimizerError::InvalidInput {
+            Some(w) => w.parse().map_err(|_| AppError::InvalidInput {
                 details: format!("Invalid width value: {}", w)
             }),
-            None => Err(OptimizerError::InvalidInput {
+            None => Err(AppError::InvalidInput {
                 details: "Width is not set".to_string()
             }),
         }
@@ -78,10 +78,10 @@ impl Panel {
     /// Get height as a parsed f64 value
     pub fn height_as_f64(&self) -> Result<f64> {
         match &self.height {
-            Some(h) => h.parse().map_err(|_| OptimizerError::InvalidInput {
+            Some(h) => h.parse().map_err(|_| AppError::InvalidInput {
                 details: format!("Invalid height value: {}", h)
             }),
-            None => Err(OptimizerError::InvalidInput {
+            None => Err(AppError::InvalidInput {
                 details: "Height is not set".to_string()
             }),
         }

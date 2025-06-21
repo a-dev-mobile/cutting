@@ -1,9 +1,9 @@
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, OptimizerError>;
+pub type Result<T> = std::result::Result<T, AppError>;
 
 #[derive(Error, Debug)]
-pub enum OptimizerError {
+pub enum AppError {
     #[error("Invalid configuration: {message}")]
     InvalidConfiguration { message: String },
 
@@ -78,4 +78,4 @@ pub enum OptimizerError {
 }
 
 /// Task-specific error type
-pub type TaskError = OptimizerError;
+pub type TaskError = AppError;
