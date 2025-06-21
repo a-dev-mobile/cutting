@@ -1,4 +1,4 @@
-use cutlist_optimizer_cli::models::tile::{TileDimensions, Orientation};
+use cutlist_optimizer_cli::models::tile_dimensions::{TileDimensions, Orientation};
 
 #[test]
 fn test_tile_creation() {
