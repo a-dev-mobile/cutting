@@ -125,6 +125,11 @@ impl Solution {
         self.no_fit_panels.extend(panels);
     }
     
+    /// Add a single panel that couldn't be fit
+    pub fn add_no_fit_panel(&mut self, panel: TileDimensions) {
+        self.no_fit_panels.push(panel);
+    }
+    
     /// Get all final tile nodes from all mosaics
     pub fn get_final_tile_nodes(&self) -> Vec<TileNode> {
         self.mosaics

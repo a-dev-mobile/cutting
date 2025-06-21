@@ -52,55 +52,70 @@ impl CutListThread {
             }
 
             let mut new_solutions = Vec::new();
-            let mut tile_fitted = false;
 
             // Try to fit the tile into each existing solution
             for solution in &current_solutions {
-                let mut solution_mosaics = solution.get_mosaics().clone();
+                let mut tile_fitted_in_solution = false;
                 
-                // Try to fit into each mosaic
-                for mosaic in &mut solution_mosaics {
+                // Try to fit into each mosaic in the solution
+                let mosaics = solution.get_mosaics();
+                for (_mosaic_index, mosaic) in mosaics.iter().enumerate() {
                     // Check material compatibility
                     let mosaic_material = mosaic.material();
-                    let tile_material = &tile_dimensions.material;
-                    if mosaic_material != tile_material {
+                    if mosaic_material != &tile_dimensions.material {
                         continue;
                     }
 
                     let mut fitting_results = Vec::new();
                     self.add_tile_to_mosaic(tile_dimensions, mosaic, &mut fitting_results)?;
                     
+                    // Create new solutions for each fitting result
                     for result_mosaic in fitting_results {
                         let mut new_solution = Solution::from_solution_excluding_mosaic(solution, mosaic);
                         new_solution.add_mosaic(result_mosaic);
                         new_solution.set_creator_thread_group(self.group.clone());
                         new_solution.set_aux_info(self.aux_info.clone());
                         new_solutions.push(new_solution);
-                        tile_fitted = true;
+                        tile_fitted_in_solution = true;
+                    }
+                    
+                    // If we found a fit, break to avoid multiple fits in same solution
+                    if tile_fitted_in_solution {
+                        break;
                     }
                 }
 
-                // If tile didn't fit in any mosaic, try unused stock panels
-                if !tile_fitted {
-                    let unused_panels = solution.get_unused_stock_panels();
+                // If tile didn't fit in any existing mosaic, try unused stock panels
+                if !tile_fitted_in_solution {
+                    let unused_panels: Vec<_> = solution.get_unused_stock_panels().iter().cloned().collect();
                     for panel in unused_panels {
                         if panel.fits(tile_dimensions) {
-                            // Create new mosaic from unused panel
+                            // Create new solution with new mosaic from unused panel
                             let mut new_solution = solution.clone();
-                            new_solution.get_unused_stock_panels_mut().retain(|p| p != panel);
-                            // Add new mosaic with the tile
-                            // This would need proper mosaic creation logic
-                            new_solutions.push(new_solution);
-                            tile_fitted = true;
+                            new_solution.get_unused_stock_panels_mut().retain(|p| p != &panel);
+                            
+                            // Create new mosaic from the panel and add the tile
+                            let new_mosaic = crate::models::Mosaic::from_tile_dimensions(&panel);
+                            let mut fitting_results = Vec::new();
+                            self.add_tile_to_mosaic(tile_dimensions, &new_mosaic, &mut fitting_results)?;
+                            
+                            for result_mosaic in fitting_results {
+                                let mut solution_with_new_mosaic = new_solution.clone();
+                                solution_with_new_mosaic.add_mosaic(result_mosaic);
+                                solution_with_new_mosaic.set_creator_thread_group(self.group.clone());
+                                solution_with_new_mosaic.set_aux_info(self.aux_info.clone());
+                                new_solutions.push(solution_with_new_mosaic);
+                                tile_fitted_in_solution = true;
+                            }
                             break;
                         }
                     }
                 }
 
                 // If still no fit, add to no-fit panels
-                if !tile_fitted {
+                if !tile_fitted_in_solution {
                     let mut new_solution = solution.clone();
-                    new_solution.get_mosaics_mut().extend(vec![]);  // Placeholder - would add to no-fit panels
+                    new_solution.add_no_fit_panel(tile_dimensions.clone());
                     new_solutions.push(new_solution);
                 }
             }
@@ -152,11 +167,41 @@ impl CutListThread {
         Ok(())
     }
 
-    /// Copy a tile node (placeholder implementation)
-    pub(crate) fn copy_tile_node(&self, _original: &TileNode, _target: &TileNode) -> Result<TileNode> {
-        // This would contain the complex node copying logic from the Java version
-        // For now, return a simple copy
-        Ok(TileNode::new(0, 100, 0, 100))
+    /// Copy a tile node tree, stopping at the target node
+    pub(crate) fn copy_tile_node(&self, original: &TileNode, target: &TileNode) -> Result<TileNode> {
+        let mut root_copy = TileNode::new(original.x1(), original.x2(), original.y1(), original.y2());
+        self.copy_children(original, &mut root_copy, target)?;
+        Ok(root_copy)
+    }
+
+    /// Recursively copy children of a tile node
+    fn copy_children(&self, original: &TileNode, copy: &mut TileNode, target: &TileNode) -> Result<()> {
+        // If we've reached the target node, stop copying
+        if std::ptr::eq(original, target) {
+            return Ok(());
+        }
+
+        // Copy child1 if it exists
+        if let Some(child1) = original.child1() {
+            let mut child1_copy = TileNode::new(child1.x1(), child1.x2(), child1.y1(), child1.y2());
+            child1_copy.set_external_id(child1.external_id());
+            child1_copy.set_final(child1.is_final());
+            child1_copy.set_rotated(child1.is_rotated());
+            copy.set_child1(Some(child1_copy.clone()));
+            self.copy_children(child1, &mut child1_copy, target)?;
+        }
+
+        // Copy child2 if it exists
+        if let Some(child2) = original.child2() {
+            let mut child2_copy = TileNode::new(child2.x1(), child2.x2(), child2.y1(), child2.y2());
+            child2_copy.set_external_id(child2.external_id());
+            child2_copy.set_final(child2.is_final());
+            child2_copy.set_rotated(child2.is_rotated());
+            copy.set_child2(Some(child2_copy.clone()));
+            self.copy_children(child2, &mut child2_copy, target)?;
+        }
+
+        Ok(())
     }
 
     /// Find candidate tile nodes that can accommodate the given dimensions
