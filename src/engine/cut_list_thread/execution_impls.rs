@@ -13,16 +13,25 @@ use super::structs::CutListThread;
 impl CutListThread {
     /// Run the thread computation (equivalent to Java's run() method)
     pub fn run(&mut self) {
+        log_info!("Starting CutListThread execution for group: {:?}", self.group);
+        
+        // Validate configuration before starting
+        if let Err(e) = self.validate_configuration() {
+            self.status = Status::Error;
+            log_error!("Configuration validation failed for group: {:?} - Error: {}", self.group, e);
+            return;
+        }
+
         match self.compute_solutions() {
             Ok(()) => {
                 if self.status != Status::Terminated {
                     self.status = Status::Finished;
                 }
-                log_info!("Thread completed successfully");
+                log_info!("Thread completed successfully for group: {:?}", self.group);
             }
             Err(e) => {
                 self.status = Status::Error;
-                log_error!("Thread failed with error: {}", e);
+                log_error!("Thread failed for group: {:?} - Error: {}", self.group, e);
             }
         }
     }

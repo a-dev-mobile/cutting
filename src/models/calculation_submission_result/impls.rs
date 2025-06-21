@@ -69,7 +69,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let result = CalculationSubmissionResult::error(StatusCode::InvalidTiles);
     /// assert_eq!(result.status_code, StatusCode::InvalidTiles);
@@ -83,7 +83,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let success = CalculationSubmissionResult::success("task_123");
     /// assert!(success.is_success());
@@ -99,7 +99,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let success = CalculationSubmissionResult::success("task_123");
     /// assert!(!success.is_error());
@@ -115,7 +115,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let result = CalculationSubmissionResult::success("task_123");
     /// assert_eq!(result.get_task_id(), Some("task_123"));
@@ -131,7 +131,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let result = CalculationSubmissionResult::success("task_123");
     /// assert_eq!(result.get_status_code(), StatusCode::Ok);
@@ -147,7 +147,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let mut result = CalculationSubmissionResult::with_status(StatusCode::Ok);
     /// result.set_task_id("new_task_id");
@@ -161,7 +161,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let mut result = CalculationSubmissionResult::success("task_123");
     /// result.clear_task_id();
@@ -178,7 +178,7 @@ impl CalculationSubmissionResult {
     /// 
     /// # Examples
     /// ```
-    /// use cutting::models::{CalculationSubmissionResult, StatusCode};
+    /// use cutlist_optimizer_cli::models::{CalculationSubmissionResult, enums::StatusCode};
     /// 
     /// let mut result = CalculationSubmissionResult::success("task_123");
     /// result.set_status_code(StatusCode::TaskAlreadyRunning);

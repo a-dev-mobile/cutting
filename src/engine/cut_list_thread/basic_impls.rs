@@ -3,7 +3,6 @@
 //! This module contains getter/setter methods and basic functionality.
 
 use crate::{
-    log_debug, log_error, log_info, log_warn,
     models::{
         Solution, TileDimensions,
         task::Task,
@@ -160,7 +159,7 @@ impl CutListThread {
     }
 
     /// Sort solutions using the provided comparators
-    pub(crate) fn sort_solutions(&self, solutions: &mut Vec<Solution>, comparators: &[SolutionComparator]) {
+    pub fn sort_solutions(&self, solutions: &mut Vec<Solution>, comparators: &[SolutionComparator]) {
         if comparators.is_empty() {
             return;
         }
@@ -174,5 +173,62 @@ impl CutListThread {
             }
             std::cmp::Ordering::Equal
         });
+    }
+
+    /// Validate the thread configuration before execution
+    pub fn validate_configuration(&self) -> crate::error::Result<()> {
+        use crate::error::OptimizerError;
+
+        // Validate tiles
+        if self.tiles.is_empty() {
+            return Err(OptimizerError::InvalidInput { 
+                details: "No tiles provided for optimization".to_string() 
+            });
+        }
+
+        // Validate cut thickness
+        if self.cut_thickness < 0 {
+            return Err(OptimizerError::InvalidInput {
+                details: "Cut thickness cannot be negative".to_string()
+            });
+        }
+
+        // Validate min trim dimension
+        if self.min_trim_dimension < 0 {
+            return Err(OptimizerError::InvalidInput {
+                details: "Minimum trim dimension cannot be negative".to_string()
+            });
+        }
+
+        // Validate accuracy factor
+        if self.accuracy_factor == 0 {
+            return Err(OptimizerError::InvalidInput {
+                details: "Accuracy factor must be greater than zero".to_string()
+            });
+        }
+
+        // Validate stock solution
+        if self.stock_solution.is_none() {
+            return Err(OptimizerError::InvalidInput {
+                details: "Stock solution is required".to_string()
+            });
+        }
+
+        // Validate tile dimensions
+        for (index, tile) in self.tiles.iter().enumerate() {
+            if tile.width <= 0 || tile.height <= 0 {
+                return Err(OptimizerError::InvalidInput {
+                    details: format!("Tile {} has invalid dimensions: {}x{}", 
+                                   index, tile.width, tile.height)
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get the elapsed time in milliseconds since the thread started
+    pub fn get_elapsed_time_millis(&self) -> u64 {
+        self.elapsed_time().as_millis() as u64
     }
 }
