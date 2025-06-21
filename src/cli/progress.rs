@@ -1,6 +1,7 @@
 //! Progress reporting utilities for CLI operations
 
 use std::time::{Duration, Instant};
+use crate::logging::{log_info, log_progress};
 
 /// A simple progress reporter for long-running operations
 pub struct ProgressReporter {
@@ -70,12 +71,12 @@ impl ProgressReporter {
         
         if let Some(total) = self.total_steps {
             let percentage = (self.current_step as f64 / total as f64 * 100.0).min(100.0);
-            println!(
+            log_progress!(
                 "[{:6.2}%] {} ({}/{}) - {:?}",
                 percentage, self.message, self.current_step, total, elapsed
             );
         } else {
-            println!(
+            log_progress!(
                 "[Step {}] {} - {:?}",
                 self.current_step, self.message, elapsed
             );
@@ -86,12 +87,12 @@ impl ProgressReporter {
     pub fn finish(&self) {
         let elapsed = Instant::now().duration_since(self.start_time);
         if let Some(total) = self.total_steps {
-            println!(
+            log_info!(
                 "✓ {} completed ({}/{}) in {:?}",
                 self.message, self.current_step, total, elapsed
             );
         } else {
-            println!(
+            log_info!(
                 "✓ {} completed ({} steps) in {:?}",
                 self.message, self.current_step, elapsed
             );
@@ -118,14 +119,13 @@ impl Spinner {
 
     /// Update the spinner display
     pub fn tick(&mut self) {
-        print!("\r{} {}", self.chars[self.current], self.message);
+        // Используем log_progress для спиннера
+        log_progress!("{} {}", self.chars[self.current], self.message);
         self.current = (self.current + 1) % self.chars.len();
-        use std::io::{self, Write};
-        io::stdout().flush().unwrap();
     }
 
     /// Finish the spinner with a completion message
     pub fn finish(&self, message: String) {
-        println!("\r✓ {}", message);
+        log_info!("\r✓ {}", message);
     }
 }

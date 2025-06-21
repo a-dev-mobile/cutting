@@ -3,7 +3,7 @@
 //! This module contains methods for managing task solutions and building final results.
 
 use std::collections::HashMap;
-use tracing::{debug, info, warn};
+use crate::{log_debug, log_info, log_warn};
 use crate::models::{CalculationResponse, FinalTile, NoFitTile, Mosaic, Solution, TileNode};
 use super::Task;
 
@@ -31,14 +31,14 @@ impl Task {
     pub fn build_solution(&self) -> Option<CalculationResponse> {
         let request = self.calculation_request.as_ref()?;
         
-        debug!("Building solution for task {} with {} materials", 
+        log_debug!("Building solution for task {} with {} materials", 
                self.id, self.solutions.lock().unwrap().len());
         
         // Collect all solutions from all materials
         let all_solutions = self.collect_all_solutions();
         
         if all_solutions.is_empty() {
-            warn!("No solutions found for task {}", self.id);
+            log_warn!("No solutions found for task {}", self.id);
             return self.build_empty_solution(request);
         }
         
@@ -55,11 +55,11 @@ impl Task {
         let mut all_solutions = Vec::new();
         
         for (material, material_solutions) in solutions_map.iter() {
-            debug!("Material '{}' has {} solutions", material, material_solutions.len());
+            log_debug!("Material '{}' has {} solutions", material, material_solutions.len());
             all_solutions.extend(material_solutions.iter().cloned());
         }
         
-        info!("Collected {} total solutions for task {}", all_solutions.len(), self.id);
+        log_info!("Collected {} total solutions for task {}", all_solutions.len(), self.id);
         all_solutions
     }
 
@@ -79,7 +79,7 @@ impl Task {
             })
             .unwrap();
         
-        debug!("Selected best solution {} with waste area: {:.2}", 
+        log_debug!("Selected best solution {} with waste area: {:.2}", 
                best.id, self.calculate_solution_waste(best));
         
         best.clone()
@@ -186,7 +186,7 @@ impl Task {
         };
         let total_wasted_area = total_stock_area - total_used_area;
         
-        info!("Built solution for task {}: {} panels, {:.1}% efficiency, {} no-fit panels", 
+        log_info!("Built solution for task {}: {} panels, {:.1}% efficiency, {} no-fit panels", 
               self.id, panels.len(), total_used_area_ratio * 100.0, no_fit_panels.len());
         
         Some(CalculationResponse {
@@ -225,7 +225,7 @@ impl Task {
             })
             .collect();
         
-        warn!("Built empty solution for task {} with {} no-fit panels", 
+        log_warn!("Built empty solution for task {} with {} no-fit panels", 
               self.id, no_fit_panels.len());
         
         Some(CalculationResponse {
@@ -280,9 +280,9 @@ impl Task {
     pub fn build_and_set_solution(&self) {
         if let Some(solution) = self.build_solution() {
             *self.solution.write().unwrap() = Some(solution);
-            info!("Solution built and set for task {}", self.id);
+            log_info!("Solution built and set for task {}", self.id);
         } else {
-            warn!("Failed to build solution for task {}", self.id);
+            log_warn!("Failed to build solution for task {}", self.id);
         }
     }
 
@@ -294,7 +294,7 @@ impl Task {
             .or_insert_with(Vec::new)
             .push(solution);
         
-        debug!("Added solution {} for material '{}' in task {}", 
+        log_debug!("Added solution {} for material '{}' in task {}", 
                solution_id, material, self.id);
     }
 

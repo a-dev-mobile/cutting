@@ -2,7 +2,7 @@
 //! 
 //! This module contains methods for managing task status transitions and validation.
 
-use tracing::{info, warn, error};
+use crate::{log_info, log_warn, log_error};
 use crate::models::enums::Status;
 use crate::error::TaskError;
 use super::Task;
@@ -31,7 +31,7 @@ impl Task {
             });
         }
         *status = Status::Running;
-        info!("Task {} set to running status", self.id);
+        log_info!("Task {} set to running status", self.id);
         Ok(())
     }
 
@@ -47,7 +47,7 @@ impl Task {
         }
         *status = Status::Finished;
         self.set_end_time();
-        info!("Task {} stopped", self.id);
+        log_info!("Task {} stopped", self.id);
         Ok(())
     }
 
@@ -63,7 +63,7 @@ impl Task {
         }
         *status = Status::Terminated;
         self.set_end_time();
-        warn!("Task {} terminated", self.id);
+        log_warn!("Task {} terminated", self.id);
         Ok(())
     }
 
@@ -72,7 +72,7 @@ impl Task {
         let mut status = self.status.write().unwrap();
         *status = Status::Error;
         self.set_end_time();
-        error!("Task {} terminated with error", self.id);
+        log_error!("Task {} terminated with error", self.id);
     }
 
     /// Check if all materials are finished and update status accordingly
@@ -97,7 +97,7 @@ impl Task {
                 }
             }
             
-            info!("Task {} finished", self.id);
+            log_info!("Task {} finished", self.id);
         }
     }
 }

@@ -4,6 +4,7 @@
 //! duration values in human-readable formats.
 
 use std::time::{Duration, Instant};
+use crate::{log_info, log_debug};
 
 /// Convert elapsed time to human readable format
 /// 
@@ -85,7 +86,7 @@ impl Timer {
     /// It also logs the result using the tracing crate.
     pub fn finish(self) -> Duration {
         let elapsed = self.elapsed();
-        tracing::info!("{} completed in {}", self.name, format_duration(elapsed));
+        log_info!("{} completed in {}", self.name, format_duration(elapsed));
         elapsed
     }
     
@@ -101,7 +102,7 @@ impl Timer {
     /// This method returns the elapsed time and logs it, but keeps the timer running.
     pub fn checkpoint(&self, checkpoint_name: &str) -> Duration {
         let elapsed = self.elapsed();
-        tracing::debug!("{} - {}: {}", self.name, checkpoint_name, format_duration(elapsed));
+        log_debug!("{} - {}: {}", self.name, checkpoint_name, format_duration(elapsed));
         elapsed
     }
 }
@@ -110,7 +111,7 @@ impl Drop for Timer {
     /// Automatically log the elapsed time when the timer is dropped
     fn drop(&mut self) {
         let elapsed = self.elapsed();
-        tracing::debug!("{} dropped after {}", self.name, format_duration(elapsed));
+        log_debug!("{} dropped after {}", self.name, format_duration(elapsed));
     }
 }
 

@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use crate::error::{OptimizerError, Result};
+use crate::logging::{log_info, log_operation_start, log_operation_success, log_operation_error};
 /// Execute the optimize command
 pub async fn optimize_command(
     input: PathBuf,
@@ -10,14 +11,14 @@ pub async fn optimize_command(
     accuracy: i32,
     threads: usize,
 ) -> Result<()> {
-    println!("Optimizing cutting layout...");
-    println!("Input file: {:?}", input);
-    println!("Output file: {:?}", output.unwrap_or_else(|| PathBuf::from("output.json")));
-    println!("Config file: {:?}", config);
-    println!("Cut thickness: {}mm", cut_thickness);
-    println!("Min trim: {}mm", min_trim);
-    println!("Accuracy: {}", accuracy);
-    println!("Threads: {}", threads);
+    log_operation_start!("Optimizing cutting layout");
+    log_info!("Input file: {:?}", input);
+    log_info!("Output file: {:?}", output.unwrap_or_else(|| PathBuf::from("output.json")));
+    log_info!("Config file: {:?}", config);
+    log_info!("Cut thickness: {}mm", cut_thickness);
+    log_info!("Min trim: {}mm", min_trim);
+    log_info!("Accuracy: {}", accuracy);
+    log_info!("Threads: {}", threads);
     
     // TODO: Implement actual optimization logic
     // For now, just validate that the input file exists
@@ -33,13 +34,13 @@ pub async fn optimize_command(
             });
      */
     
-    println!("Optimization completed successfully!");
+    log_operation_success!("Optimization completed successfully");
     Ok(())
 }
 
 /// Execute the validate command
 pub async fn validate_command(input: PathBuf) -> Result<()> {
-    println!("Validating input file: {:?}", input);
+    log_operation_start!("Validating input file: {:?}", input);
     
     if !input.exists() {
         return Err(OptimizerError::InvalidInput {
@@ -51,11 +52,11 @@ pub async fn validate_command(input: PathBuf) -> Result<()> {
     // Check file extension and basic format validation
     match input.extension().and_then(|ext| ext.to_str()) {
         Some("csv") => {
-            println!("Detected CSV format");
+            log_info!("Detected CSV format");
             // TODO: Validate CSV structure
         }
         Some("json") => {
-            println!("Detected JSON format");
+            log_info!("Detected JSON format");
             // TODO: Validate JSON structure
         }
         _ => {
@@ -65,27 +66,27 @@ pub async fn validate_command(input: PathBuf) -> Result<()> {
         }
     }
     
-    println!("Input file validation completed successfully!");
+    log_operation_success!("Input file validation completed successfully");
     Ok(())
 }
 
 /// Execute the example command
 pub async fn example_command(format: String) -> Result<()> {
-    println!("Generating example input file in {} format", format);
+    log_operation_start!("Generating example input file in {} format", format);
     
     match format.as_str() {
         "csv" => {
-            println!("\nExample CSV format:");
-            println!("width,height,quantity,label");
-            println!("1200,800,5,Panel A");
-            println!("600,400,10,Panel B");
-            println!("300,200,15,Panel C");
-            println!("\nSave this as input.csv and use with:");
-            println!("cutlist optimize -i input.csv -o output.json");
+            log_info!("\nExample CSV format:");
+            log_info!("width,height,quantity,label");
+            log_info!("1200,800,5,Panel A");
+            log_info!("600,400,10,Panel B");
+            log_info!("300,200,15,Panel C");
+            log_info!("\nSave this as input.csv and use with:");
+            log_info!("cutlist optimize -i input.csv -o output.json");
         }
         "json" => {
-            println!("\nExample JSON format:");
-            println!(r#"{{
+            log_info!("\nExample JSON format:");
+            log_info!(r#"{{
   "pieces": [
     {{
       "width": 1200,
@@ -107,8 +108,8 @@ pub async fn example_command(format: String) -> Result<()> {
     }}
   ]
 }}"#);
-            println!("\nSave this as input.json and use with:");
-            println!("cutlist optimize -i input.json -o output.json");
+            log_info!("\nSave this as input.json and use with:");
+            log_info!("cutlist optimize -i input.json -o output.json");
         }
         _ => {
             return Err(OptimizerError::InvalidInput {
