@@ -1,8 +1,10 @@
-use cutlist_optimizer_cli::models::{Panel, Edge};
+
 
 #[cfg(test)]
 mod panel_tests {
-    use super::*;
+    use cutlist_optimizer_cli::models::panel::Panel;
+
+
 
     #[test]
     fn test_panel_default() {
@@ -227,7 +229,8 @@ mod panel_tests {
 
 #[cfg(test)]
 mod edge_tests {
-    use super::*;
+    use cutlist_optimizer_cli::models::{edge::Edge, panel::Panel};
+
 
     #[test]
     fn test_edge_default() {

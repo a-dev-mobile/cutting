@@ -1,6 +1,6 @@
-use super::structs::Panel;
-use crate::models::panel::edge::Edge;
+use crate::models::edge::Edge;
 use crate::error::{OptimizerError, Result};
+use crate::models::panel::Panel;
 
 impl Panel {
     /// Create a new panel with default values

@@ -1,5 +1,4 @@
-pub mod edge;
-pub mod panel;
+pub mod structs;
+pub mod impls;
 
-pub use edge::Edge;
-pub use panel::Panel;
+pub use structs::Panel;

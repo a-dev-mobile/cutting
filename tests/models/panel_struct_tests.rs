@@ -1,7 +1,9 @@
-use cutlist_optimizer_cli::models::panel::{Panel, Edge};
+use cutlist_optimizer_cli::models::panel::Panel;
 
 #[cfg(test)]
 mod panel_struct_tests {
+    use cutlist_optimizer_cli::models::edge::Edge;
+
     use super::*;
 
     #[test]

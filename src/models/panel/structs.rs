@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::models::DEFAULT_MATERIAL;
-use crate::models::panel::edge::Edge;
+use crate::models::{edge::Edge, DEFAULT_MATERIAL};
+
 
 /// Represents a panel with dimensions, material, and configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

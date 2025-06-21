@@ -3,11 +3,13 @@
 pub mod configuration;
 pub mod cut;
 // pub mod geometry;
-pub mod panel;
+
 pub mod performance_thresholds;
 // pub mod solution;
 // pub mod task;
 pub mod tile;
+pub mod edge;
+pub mod panel;
 pub mod tile_dimensions;
 pub mod tile_node;
 
@@ -18,7 +20,7 @@ pub const DEFAULT_MATERIAL: &str = "DEFAULT";
 pub use configuration::Configuration;
 pub use cut::{Cut, CutBuilder};
 // pub use geometry::{Cut, Mosaic, TileNode};
-pub use panel::{Panel, Edge};
+
 pub use performance_thresholds::PerformanceThresholds;
 // pub use solution::Solution;
 // pub use task::{Task, TaskStatus, TaskStatusResponse};
