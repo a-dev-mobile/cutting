@@ -3,6 +3,7 @@ pub mod calculation_request;
 pub mod configuration;
 pub mod cut;
 // pub mod geometry;
+pub mod grouped_tile_dimensions;
 
 pub mod performance_thresholds;
 // pub mod solution;
@@ -21,6 +22,7 @@ pub use configuration::Configuration;
 pub use cut::{Cut, CutBuilder};
 pub use edge::Edge;
 // pub use geometry::{Cut, Mosaic, TileNode};
+pub use grouped_tile_dimensions::GroupedTileDimensions;
 pub use panel::Panel;
 pub use performance_thresholds::PerformanceThresholds;
 // pub use solution::Solution;

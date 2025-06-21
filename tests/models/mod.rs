@@ -1,6 +1,7 @@
 pub mod calculation_request_tests;
 pub mod cut_tests;
 pub mod edge_tests;
+pub mod grouped_tile_dimensions_tests;
 pub mod panel_tests;
 pub mod panel_struct_tests;
 pub mod performance_thresholds_tests;
