@@ -14,7 +14,7 @@
 //! # Quick Start
 //! 
 //! ```rust
-//! use cutting::utils::{
+//! use cutlist_optimizer_cli::utils::{
 //!     arrangement::generate_permutations,
 //!     edge_banding::calc_edge_bands,
 //!     timing::{Timer, format_duration},
@@ -31,6 +31,8 @@
 //! let elapsed = timer.finish();
 //! 
 //! // Calculate percentages
+//! let used_area = 75.0;
+//! let total_area = 100.0;
 //! let efficiency = percentage(used_area, total_area);
 //! ```
 

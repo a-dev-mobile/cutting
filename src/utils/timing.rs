@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::timing::format_duration;
+/// use cutlist_optimizer_cli::utils::timing::format_duration;
 /// use std::time::Duration;
 /// 
 /// assert_eq!(format_duration(Duration::from_millis(500)), "500ms");
@@ -50,7 +50,7 @@ pub fn format_duration(duration: Duration) -> String {
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::timing::Timer;
+/// use cutlist_optimizer_cli::utils::timing::Timer;
 /// 
 /// let timer = Timer::new("My operation");
 /// // ... do some work ...
@@ -128,7 +128,7 @@ impl Drop for Timer {
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::timing::measure_time;
+/// use cutlist_optimizer_cli::utils::timing::measure_time;
 /// 
 /// let (result, duration) = measure_time("calculation", || {
 ///     // Some expensive calculation

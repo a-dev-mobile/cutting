@@ -21,8 +21,8 @@ use crate::models::{TileNode, Panel};
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::edge_banding::calc_edge_bands;
-/// use cutting::models::{TileNode, Panel, Edge};
+/// use cutlist_optimizer_cli::utils::edge_banding::calc_edge_bands;
+/// use cutlist_optimizer_cli::models::{TileNode, Panel, Edge};
 /// use std::collections::HashMap;
 /// 
 /// let tile_nodes = vec![/* tile nodes */];

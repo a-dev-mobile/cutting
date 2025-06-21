@@ -18,7 +18,7 @@
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::arrangement::generate_permutations;
+/// use cutlist_optimizer_cli::utils::arrangement::generate_permutations;
 /// 
 /// let input = vec![1, 2, 3];
 /// let perms = generate_permutations(input);

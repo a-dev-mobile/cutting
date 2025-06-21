@@ -17,7 +17,7 @@
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::math::percentage;
+/// use cutlist_optimizer_cli::utils::math::percentage;
 /// 
 /// assert_eq!(percentage(25.0, 100.0), 25.0);
 /// assert_eq!(percentage(0.0, 100.0), 0.0);
@@ -75,7 +75,7 @@ pub fn waste_percentage(used: f64, total: f64) -> f64 {
 /// 
 /// # Examples
 /// ```
-/// use cutting::utils::math::round_to_decimal_places;
+/// use cutlist_optimizer_cli::utils::math::round_to_decimal_places;
 /// 
 /// assert_eq!(round_to_decimal_places(3.14159, 2), 3.14);
 /// assert_eq!(round_to_decimal_places(2.5, 0), 3.0);
