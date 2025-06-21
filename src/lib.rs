@@ -21,11 +21,11 @@ pub mod utils;
 
 // Публичный API библиотеки
 pub use error::{OptimizerError, Result};
-pub use models::{Configuration, TileDimensions, Orientation};
+pub use models::{Configuration, TileDimensions, Orientation, DEFAULT_MATERIAL};
 
 // Основные типы для работы с библиотекой
 pub mod prelude {
     //! Основные типы и трейты для удобного импорта
     pub use crate::error::{OptimizerError, Result};
-    pub use crate::models::{Configuration, TileDimensions, Orientation};
+    pub use crate::models::{Configuration, TileDimensions, Orientation, DEFAULT_MATERIAL};
 }

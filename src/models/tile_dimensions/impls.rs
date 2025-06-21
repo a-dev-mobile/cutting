@@ -1,5 +1,6 @@
 use super::structs::TileDimensions;
 use super::enums::Orientation;
+use crate::models::DEFAULT_MATERIAL;
 
 impl TileDimensions {
     /// Create a new tile with given dimensions
@@ -9,7 +10,7 @@ impl TileDimensions {
             width,
             height,
             label: None,
-            material: "DEFAULT".to_string(),
+            material: DEFAULT_MATERIAL.to_string(),
             orientation: Orientation::Any,
             is_rotated: false,
         }
