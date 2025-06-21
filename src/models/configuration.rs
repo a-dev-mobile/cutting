@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::engine::comparator::OptimizationPriority;
+use crate::error::{OptimizerError, Result};
 
 /// Configuration parameters for the optimization process
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,21 +69,21 @@ impl Default for PerformanceThresholds {
 
 impl Configuration {
     /// Validate configuration parameters
-    pub fn validate(&self) -> crate::Result<()> {
+    pub fn validate(&self) -> Result<()> {
         if self.cut_thickness < 0 {
-            return Err(crate::OptimizerError::InvalidConfiguration {
+            return Err(OptimizerError::InvalidConfiguration {
                 message: "Cut thickness cannot be negative".to_string(),
             });
         }
         
         if self.min_trim_dimension < 0 {
-            return Err(crate::OptimizerError::InvalidConfiguration {
+            return Err(OptimizerError::InvalidConfiguration {
                 message: "Min trim dimension cannot be negative".to_string(),
             });
         }
         
         if !(1..=10).contains(&self.optimization_factor) {
-            return Err(crate::OptimizerError::InvalidConfiguration {
+            return Err(OptimizerError::InvalidConfiguration {
                 message: "Optimization factor must be between 1 and 10".to_string(),
             });
         }
