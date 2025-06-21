@@ -15,6 +15,7 @@
 // Внутренние модули
 pub mod cli;
 pub mod engine;
+pub use engine::stock;
 pub mod error;
 pub mod models;
 pub mod utils;
