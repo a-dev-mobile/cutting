@@ -58,4 +58,14 @@ pub enum OptimizerError {
 
     #[error("Candidate search error: {message}")]
     CandidateSearch { message: String },
+
+    // Task management errors
+    #[error("Invalid status transition from {from:?} to {to:?}")]
+    InvalidStatusTransition {
+        from: crate::models::enums::Status,
+        to: crate::models::enums::Status,
+    },
 }
+
+/// Task-specific error type
+pub type TaskError = OptimizerError;
