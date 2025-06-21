@@ -5,8 +5,11 @@
 //! and ownership model.
 
 pub mod structs;
-pub mod basic_impls;
-pub mod computation_impls;
+pub mod getters_setters;
+pub mod validation;
+pub mod core_computation;
+pub mod tile_fitting;
+pub mod cutting_strategies;
 pub mod execution_impls;
 
 // Re-export the main types

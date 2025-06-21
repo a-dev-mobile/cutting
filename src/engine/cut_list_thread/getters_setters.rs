@@ -1,6 +1,6 @@
-//! Basic implementations for CutListThread
+//! Getter and setter implementations for CutListThread
 //! 
-//! This module contains getter/setter methods and basic functionality.
+//! This module contains all the getter and setter methods for the CutListThread struct.
 
 use crate::{
     models::{
@@ -15,10 +15,10 @@ use std::{
     time::Duration,
 };
 
-use super::{structs::{CutListThread, SolutionComparator}};
+use super::structs::{CutListThread, SolutionComparator};
 
 impl CutListThread {
-    // Getter and setter methods
+    // Basic property getters and setters
     
     pub fn group(&self) -> Option<&str> {
         self.group.as_deref()
@@ -44,6 +44,8 @@ impl CutListThread {
         self.task = task;
     }
 
+    // Comparator getters and setters
+    
     pub fn thread_prioritized_comparators(&self) -> &[SolutionComparator] {
         &self.thread_prioritized_comparators
     }
@@ -60,6 +62,8 @@ impl CutListThread {
         self.final_solution_prioritized_comparators = comparators;
     }
 
+    // Status and configuration getters and setters
+    
     pub fn status(&self) -> Status {
         self.status
     }
@@ -100,6 +104,8 @@ impl CutListThread {
         self.percentage_done
     }
 
+    // Data collection getters and setters
+    
     pub fn tiles(&self) -> &[TileDimensions] {
         &self.tiles
     }
@@ -140,6 +146,8 @@ impl CutListThread {
         self.stock_solution = stock_solution;
     }
 
+    // Computed property getters
+    
     /// Get the material from the first solution (if any)
     pub fn material(&self) -> Option<String> {
         if let Ok(all_solutions) = self.all_solutions.lock() {
@@ -156,75 +164,6 @@ impl CutListThread {
         self.start_time
             .map(|start| start.elapsed())
             .unwrap_or_default()
-    }
-
-    /// Sort solutions using the provided comparators
-    pub fn sort_solutions(&self, solutions: &mut Vec<Solution>, comparators: &[SolutionComparator]) {
-        if comparators.is_empty() {
-            return;
-        }
-
-        solutions.sort_by(|a, b| {
-            for comparator in comparators {
-                let result = comparator(a, b);
-                if result != std::cmp::Ordering::Equal {
-                    return result;
-                }
-            }
-            std::cmp::Ordering::Equal
-        });
-    }
-
-    /// Validate the thread configuration before execution
-    pub fn validate_configuration(&self) -> crate::error::Result<()> {
-        use crate::error::OptimizerError;
-
-        // Validate tiles
-        if self.tiles.is_empty() {
-            return Err(OptimizerError::InvalidInput { 
-                details: "No tiles provided for optimization".to_string() 
-            });
-        }
-
-        // Validate cut thickness
-        if self.cut_thickness < 0 {
-            return Err(OptimizerError::InvalidInput {
-                details: "Cut thickness cannot be negative".to_string()
-            });
-        }
-
-        // Validate min trim dimension
-        if self.min_trim_dimension < 0 {
-            return Err(OptimizerError::InvalidInput {
-                details: "Minimum trim dimension cannot be negative".to_string()
-            });
-        }
-
-        // Validate accuracy factor
-        if self.accuracy_factor == 0 {
-            return Err(OptimizerError::InvalidInput {
-                details: "Accuracy factor must be greater than zero".to_string()
-            });
-        }
-
-        // Validate stock solution
-        if self.stock_solution.is_none() {
-            return Err(OptimizerError::InvalidInput {
-                details: "Stock solution is required".to_string()
-            });
-        }
-
-        // Validate tile dimensions
-        for (index, tile) in self.tiles.iter().enumerate() {
-            if tile.width <= 0 || tile.height <= 0 {
-                return Err(OptimizerError::InvalidInput {
-                    details: format!("Tile {} has invalid dimensions: {}x{}", 
-                                   index, tile.width, tile.height)
-                });
-            }
-        }
-
-        Ok(())
     }
 
     /// Get the elapsed time in milliseconds since the thread started
