@@ -11,7 +11,7 @@ fn test_new_calculation_request() {
 #[test]
 fn test_with_configuration() {
     use cutlist_optimizer_cli::models::Configuration;
-    use cutlist_optimizer_cli::engine::comparator::OptimizationPriority;
+    use cutlist_optimizer_cli::comparator::OptimizationPriority;
     use cutlist_optimizer_cli::models::PerformanceThresholds;
     
     let config = Configuration {
@@ -147,7 +147,7 @@ fn test_set_stock_panels() {
 #[test]
 fn test_take_configuration() {
     use cutlist_optimizer_cli::models::Configuration;
-    use cutlist_optimizer_cli::engine::comparator::OptimizationPriority;
+    use cutlist_optimizer_cli::comparator::OptimizationPriority;
     use cutlist_optimizer_cli::models::PerformanceThresholds;
     
     let config = Configuration {

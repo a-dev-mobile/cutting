@@ -1,5 +1,5 @@
 use super::structs::Configuration;
-use crate::engine::comparator::OptimizationPriority;
+use crate::comparator::OptimizationPriority;
 use crate::error::{OptimizerError, Result};
 use crate::models::performance_thresholds::PerformanceThresholds;
 

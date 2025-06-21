@@ -1,4 +1,4 @@
-use cutlist_optimizer_cli::engine::stock::StockSolution;
+use cutlist_optimizer_cli::stock::StockSolution;
 use cutlist_optimizer_cli::models::{TileDimensions, Orientation};
 
 #[cfg(test)]

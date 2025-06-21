@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::engine::comparator::OptimizationPriority;
+use crate::comparator::OptimizationPriority;
 use crate::models::performance_thresholds::PerformanceThresholds;
 
 /// Configuration parameters for the optimization process
