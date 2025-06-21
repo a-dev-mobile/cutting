@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::models::{edge::Edge, DEFAULT_MATERIAL};
+use crate::models::edge::Edge;
+use crate::constants::MaterialConstants;
 
 
 /// Represents a panel with dimensions, material, and configuration
@@ -24,7 +25,7 @@ impl Default for Panel {
             width: None,
             height: None,
             count: 0,
-            material: DEFAULT_MATERIAL.to_string(), // Using same default as TileDimensions
+            material: MaterialConstants::DEFAULT_MATERIAL.to_string(), // Using same default as TileDimensions
             enabled: false,
             orientation: 0,
             label: None,

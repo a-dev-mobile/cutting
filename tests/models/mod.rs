@@ -12,6 +12,7 @@ pub mod panel_tests;
 pub mod performance_thresholds_tests;
 pub mod solution_tests;
 pub mod task_tests;
+pub mod task_status_response_tests;
 pub mod tile_dimensions_tests;
 pub mod tile_node_tests;
 pub mod tile_tests;

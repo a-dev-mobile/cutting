@@ -30,8 +30,8 @@ pub use models::{
     enums::{CutDirection, OptimizationPriority, Orientation, Status, StatusCode},
     Configuration,
     TileDimensions,
-    DEFAULT_MATERIAL,
 };
+pub use constants::MaterialConstants;
 
 // Основные типы для работы с библиотекой
 pub mod prelude {
@@ -41,6 +41,6 @@ pub mod prelude {
         enums::{CutDirection, OptimizationPriority, Orientation, Status, StatusCode},
         Configuration,
         TileDimensions,
-        DEFAULT_MATERIAL,
     };
+    pub use crate::constants::MaterialConstants;
 }
