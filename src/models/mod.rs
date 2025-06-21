@@ -1,5 +1,6 @@
 
 pub mod calculation_request;
+pub mod calculation_response;
 pub mod configuration;
 pub mod cut;
 pub mod final_tile;
@@ -20,6 +21,7 @@ pub mod tile_node;
 pub const DEFAULT_MATERIAL: &str = "DEFAULT";
 
 pub use calculation_request::CalculationRequest;
+pub use calculation_response::CalculationResponse;
 pub use configuration::Configuration;
 pub use cut::{Cut, CutBuilder};
 pub use edge::Edge;

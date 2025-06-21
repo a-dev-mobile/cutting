@@ -14,12 +14,3 @@ pub struct CalculationRequest {
     pub stock_panels: Vec<Panel>,
 }
 
-impl Default for CalculationRequest {
-    fn default() -> Self {
-        Self {
-            configuration: None,
-            panels: Vec::new(),
-            stock_panels: Vec::new(),
-        }
-    }
-}

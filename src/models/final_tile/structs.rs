@@ -4,7 +4,7 @@
 /// 
 /// This structure represents tiles that have been successfully placed
 /// in the cutting layout, with tracking for the original request.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FinalTile {
     /// Reference to the original request object ID
     pub request_obj_id: i32,

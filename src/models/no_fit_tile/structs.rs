@@ -4,7 +4,7 @@
 /// 
 /// This structure tracks tiles that cannot be placed in the current layout,
 /// maintaining their dimensions, count, and optional metadata.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NoFitTile {
     /// Unique identifier for the tile
     pub id: i32,
