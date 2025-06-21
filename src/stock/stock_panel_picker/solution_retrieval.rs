@@ -2,8 +2,8 @@
 
 use std::time::Duration;
 use crate::error::{AppError, Result};
-use crate::stock::StockSolution;
-use super::{StockPanelPicker, StockPanelPickerConfig};
+use crate::stock::{StockSolution, StockConstants};
+use super::StockPanelPicker;
 
 impl StockPanelPicker {
     /// Get a stock solution by index, waiting if necessary for generation to complete
@@ -62,7 +62,7 @@ impl StockPanelPicker {
 
             // Wait before checking again
             crate::log_debug!("Waiting for stock solution generation: idx[{}]", index);
-            std::thread::sleep(Duration::from_millis(StockPanelPickerConfig::SOLUTION_WAIT_SLEEP_MS));
+            std::thread::sleep(Duration::from_millis(StockConstants::SOLUTION_WAIT_SLEEP_MS));
         }
     }
 
@@ -154,7 +154,7 @@ impl StockPanelPicker {
             }
 
             // Wait before checking again
-            std::thread::sleep(Duration::from_millis(StockPanelPickerConfig::SOLUTION_WAIT_SLEEP_MS));
+            std::thread::sleep(Duration::from_millis(StockConstants::SOLUTION_WAIT_SLEEP_MS));
         }
     }
 }

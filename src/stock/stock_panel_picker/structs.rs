@@ -9,19 +9,6 @@ use crate::models::{task::Task, TileDimensions};
 use crate::stock::{StockSolution, StockSolutionGenerator};
 use crate::error::Result;
 
-/// Configuration constants for stock panel picker
-pub struct StockPanelPickerConfig;
-
-impl StockPanelPickerConfig {
-    /// Minimum number of initial stock solutions to generate
-    pub const MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE: usize = 10;
-    
-    /// Minimum number of stock solutions to generate when all fit solution exists
-    pub const MIN_STOCK_SOLUTIONS_TO_GENERATE_WITH_ALL_FIT_SOLUTION: usize = 100;
-    
-    /// Sleep duration in milliseconds when waiting for solutions
-    pub const SOLUTION_WAIT_SLEEP_MS: u64 = 1000;
-}
 
 /// Result type for stock panel picker operations
 pub type StockPanelPickerResult<T> = Result<T>;
@@ -99,15 +86,4 @@ pub struct StockPanelPickerStats {
     
     /// Required area from the generator
     pub required_area: i64,
-}
-
-impl StockPanelPicker {
-    /// Minimum number of initial stock solutions to generate
-    pub const MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE: usize = 10;
-    
-    /// Minimum number of stock solutions to generate when all fit solution exists
-    pub const MIN_STOCK_SOLUTIONS_TO_GENERATE_WITH_ALL_FIT_SOLUTION: usize = 100;
-    
-    /// Sleep duration in milliseconds when waiting for solutions
-    pub const SOLUTION_WAIT_SLEEP_MS: u64 = 1000;
 }

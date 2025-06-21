@@ -7,7 +7,7 @@ use tokio::time::sleep;
 use crate::{log_debug, log_error};
 
 use crate::models::task::Task;
-use crate::stock::StockSolution;
+use crate::stock::{StockSolution, StockConstants};
 use crate::error::{AppError, Result};
 use super::StockPanelPicker;
 
@@ -100,7 +100,7 @@ impl StockPanelPicker {
                 let max_idx = *max_idx_guard;
 
                 // Generate if we're running low on solutions or haven't reached minimum
-                max_idx >= solutions_count.saturating_sub(1) || solutions_count <= Self::MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE
+                max_idx >= solutions_count.saturating_sub(1) || solutions_count <= StockConstants::MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE
             };
 
             if should_generate {
@@ -154,7 +154,7 @@ impl StockPanelPicker {
                     last_generated_solution = Some(solution);
 
                     // Check termination conditions after adding solution
-                    if task.has_solution_all_fit() && solutions_count >= Self::MIN_STOCK_SOLUTIONS_TO_GENERATE_WITH_ALL_FIT_SOLUTION {
+                    if task.has_solution_all_fit() && solutions_count >= StockConstants::MIN_STOCK_SOLUTIONS_TO_GENERATE_WITH_ALL_FIT_SOLUTION {
                         log_debug!(
                             "Finishing stock picker thread: nbrGeneratedStockSolutions[{}] - Task has already an all fit solution",
                             solutions_count
@@ -193,8 +193,8 @@ impl StockPanelPicker {
                 );
 
                 // Sleep if we have enough solutions
-                if solutions_count > Self::MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE {
-                    sleep(Duration::from_millis(1000)).await;
+                if solutions_count > StockConstants::MIN_INIT_STOCK_SOLUTIONS_TO_GENERATE {
+                    sleep(Duration::from_millis(StockConstants::SOLUTION_WAIT_SLEEP_MS)).await;
                 }
             }
 

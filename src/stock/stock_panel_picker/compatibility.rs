@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 use crate::error::{AppError, Result};
-use crate::stock::StockSolution;
+use crate::stock::{StockSolution, StockConstants};
 use super::StockPanelPicker;
 
 impl StockPanelPicker {
@@ -28,11 +28,10 @@ impl StockPanelPicker {
 
         let start_time = std::time::Instant::now();
         let mut iteration_count = 0;
-        const MAX_ITERATIONS: u32 = 10000; // Prevent infinite loops
 
         loop {
             iteration_count += 1;
-            if iteration_count > MAX_ITERATIONS {
+            if iteration_count > StockConstants::MAX_ITERATIONS {
                 return Err(AppError::StockGenerationInterrupted {
                     message: "Maximum iteration count exceeded".to_string(),
                 });
@@ -66,7 +65,7 @@ impl StockPanelPicker {
             }
 
             // Sleep before retrying (mimics Java's Thread.sleep)
-            std::thread::sleep(Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(StockConstants::RETRY_SLEEP_MS));
         }
     }
 
