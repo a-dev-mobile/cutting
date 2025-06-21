@@ -17,4 +17,5 @@ pub use structs::LogConfig;
 // Реэкспорт макросов
 pub use crate::{
     log_operation_error, log_operation_start, log_operation_success, log_progress, log_result,
+    log_fatal, log_info, log_error,
 };

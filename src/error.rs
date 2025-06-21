@@ -30,4 +30,32 @@ pub enum OptimizerError {
 
     #[error("Computation error: {message}")]
     Computation { message: String },
+
+    // Cut list specific errors
+    #[error("Cannot start thread without user info")]
+    MissingClientInfo,
+
+    #[error("Thread was terminated during execution")]
+    ThreadTerminated,
+
+    #[error("Error during solution computation: {message}")]
+    SolutionComputation { message: String },
+
+    #[error("Error during solution comparison: {message}")]
+    SolutionComparison { message: String },
+
+    #[error("Material mismatch: tile[{tile_material}] mosaic[{mosaic_material}]")]
+    MaterialMismatch {
+        tile_material: String,
+        mosaic_material: String,
+    },
+
+    #[error("Thread synchronization error: {message}")]
+    ThreadSync { message: String },
+
+    #[error("Node copying error: {message}")]
+    NodeCopy { message: String },
+
+    #[error("Candidate search error: {message}")]
+    CandidateSearch { message: String },
 }

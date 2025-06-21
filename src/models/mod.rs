@@ -12,7 +12,7 @@ pub mod mosaic;
 pub mod no_fit_tile;
 pub mod performance_thresholds;
 pub mod solution;
-// pub mod task;
+pub mod task;
 pub mod tile;
 pub mod edge;
 pub mod panel;
