@@ -303,54 +303,24 @@ impl CutListOptimizerServiceImpl {
         result
     }
 
-    /// Get number of decimal places in a string (ported from Java)
-    pub(crate) fn get_nbr_decimal_places(&self, value: &str) -> usize {
-        if let Some(dot_index) = value.find('.') {
-            value.len() - dot_index - 1
-        } else {
-            0
-        }
+    /// Get number of decimal places in a string (delegated to DecimalPlaceCounter)
+    pub fn get_nbr_decimal_places(&self, value: &str) -> usize {
+        super::decimal_places::DecimalPlaceCounter::get_nbr_decimal_places(value)
     }
 
-    /// Get number of integer places in a string (ported from Java)
-    pub(crate) fn get_nbr_integer_places(&self, value: &str) -> usize {
-        if let Some(dot_index) = value.find('.') {
-            dot_index
-        } else {
-            value.len()
-        }
+    /// Get number of integer places in a string (delegated to DecimalPlaceCounter)
+    pub fn get_nbr_integer_places(&self, value: &str) -> usize {
+        super::decimal_places::DecimalPlaceCounter::get_nbr_integer_places(value)
     }
 
-    /// Get maximum number of decimal places from panels (ported from Java)
-    pub(crate) fn get_max_nbr_decimal_places(&self, panels: &[Panel]) -> usize {
-        panels.iter()
-            .filter(|panel| panel.enabled)
-            .map(|panel| {
-                let width_str = panel.width.as_deref().unwrap_or("0");
-                let height_str = panel.height.as_deref().unwrap_or("0");
-                std::cmp::max(
-                    self.get_nbr_decimal_places(width_str),
-                    self.get_nbr_decimal_places(height_str)
-                )
-            })
-            .max()
-            .unwrap_or(0)
+    /// Get maximum number of decimal places from panels (delegated to DecimalPlaceCounter)
+    pub fn get_max_nbr_decimal_places(&self, panels: &[Panel]) -> usize {
+        super::decimal_places::DecimalPlaceCounter::get_max_nbr_decimal_places(panels)
     }
 
-    /// Get maximum number of integer places from panels (ported from Java)
-    pub(crate) fn get_max_nbr_integer_places(&self, panels: &[Panel]) -> usize {
-        panels.iter()
-            .filter(|panel| panel.enabled)
-            .map(|panel| {
-                let width_str = panel.width.as_deref().unwrap_or("0");
-                let height_str = panel.height.as_deref().unwrap_or("0");
-                std::cmp::max(
-                    self.get_nbr_integer_places(width_str),
-                    self.get_nbr_integer_places(height_str)
-                )
-            })
-            .max()
-            .unwrap_or(0)
+    /// Get maximum number of integer places from panels (delegated to DecimalPlaceCounter)
+    pub fn get_max_nbr_integer_places(&self, panels: &[Panel]) -> usize {
+        super::decimal_places::DecimalPlaceCounter::get_max_nbr_integer_places(panels)
     }
 
     /// Check if thread is eligible to start (ported from Java)
