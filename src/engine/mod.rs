@@ -16,7 +16,15 @@ pub use cut_list_thread::CutListThread;
 pub use comparator::SolutionComparator;
 pub use service::CutListOptimizerService;
 pub use service_impl::CutListOptimizerServiceImpl;
-pub use running_tasks::RunningTasks;
+pub use running_tasks::{
+    RunningTasks, 
+    TaskManager, 
+    StatusManager, 
+    StatisticsCollector, 
+    TaskCleanup, 
+    TaskManagerSingleton,
+    get_running_tasks_instance,
+};
 pub use watch_dog::WatchDog;
 
 // Re-export stock module for public API compatibility

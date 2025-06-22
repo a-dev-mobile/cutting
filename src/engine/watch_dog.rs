@@ -4,7 +4,7 @@ use tokio::time::interval;
 use tracing::{debug, error, info, warn};
 
 use crate::models::enums::Status;
-use super::running_tasks::RunningTasks;
+use super::running_tasks::{RunningTasks, TaskManager, StatisticsCollector};
 
 /// WatchDog monitors running tasks and handles cleanup of stale tasks
 pub struct WatchDog {

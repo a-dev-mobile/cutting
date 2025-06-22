@@ -1,7 +1,7 @@
 //! Tests for RunningTasks management system
 
 use cutlist_optimizer_cli::{
-    engine::RunningTasks,
+    engine::{RunningTasks, TaskManager, StatusManager, StatisticsCollector, TaskManagerSingleton},
     models::{task::Task, enums::Status},
 };
 use std::sync::Arc;
