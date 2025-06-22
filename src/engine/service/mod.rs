@@ -49,6 +49,7 @@
 // Core modules
 pub mod traits;
 pub mod core;
+pub mod core_fixed;
 pub mod decimal_places;
 
 // Operation modules
