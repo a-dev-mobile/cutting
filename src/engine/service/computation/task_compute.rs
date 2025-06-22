@@ -10,6 +10,7 @@ use crate::{
         task::structs::Task,
     },
     logging::macros::info,
+    constants::EngineConstants,
 };
 
 use super::{
@@ -26,7 +27,7 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
     let (tiles, stock_tiles, _factor) = DimensionUtils::convert_panels_to_tiles(
         &request.panels, 
         &request.stock_panels, 
-        crate::engine::service::core::MAX_ALLOWED_DIGITS
+        EngineConstants::MAX_ALLOWED_DIGITS
     )?;
 
     // Create task

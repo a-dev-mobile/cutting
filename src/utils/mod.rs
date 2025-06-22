@@ -125,20 +125,22 @@ pub mod validation {
 
 /// Common constants used throughout the system
 pub mod constants {
+    use crate::constants::{UtilityConstants, EngineConstants};
+    
     /// Default epsilon for floating point comparisons
-    pub const DEFAULT_EPSILON: f64 = 1e-10;
+    pub const DEFAULT_EPSILON: f64 = UtilityConstants::DEFAULT_EPSILON;
     
     /// Conversion factor from millimeters to meters
-    pub const MM_TO_M: f64 = 0.001;
+    pub const MM_TO_M: f64 = UtilityConstants::MM_TO_M;
     
     /// Conversion factor from meters to millimeters
-    pub const M_TO_MM: f64 = 1000.0;
+    pub const M_TO_MM: f64 = UtilityConstants::M_TO_MM;
     
     /// Conversion factor from inches to millimeters
-    pub const INCHES_TO_MM: f64 = 25.4;
+    pub const INCHES_TO_MM: f64 = UtilityConstants::INCHES_TO_MM;
     
     /// Maximum reasonable number of permutations to generate
-    pub const MAX_PERMUTATIONS: usize = 5040; // 7!
+    pub const MAX_PERMUTATIONS: usize = EngineConstants::MAX_PERMUTATIONS;
 }
 
 /// Helper macros for common operations

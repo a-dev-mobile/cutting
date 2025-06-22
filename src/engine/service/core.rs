@@ -14,6 +14,7 @@ use crate::{
         watch_dog::core::WatchDog,
         running_tasks::structs::RunningTasks,
     },
+    constants::EngineConstants,
 };
 
 /// Main implementation of the CutList Optimizer Service
@@ -44,16 +45,6 @@ pub struct CutListOptimizerServiceImpl {
     date_format: String,
 }
 
-/// Constants from Java implementation
-pub const MAX_PERMUTATION_ITERATIONS: usize = 1000;
-pub const MAX_STOCK_ITERATIONS: usize = 1000;
-pub const MAX_ALLOWED_DIGITS: usize = 6;
-pub const THREAD_QUEUE_SIZE: usize = 1000;
-pub const MAX_ACTIVE_THREADS_PER_TASK: usize = 5;
-pub const MAX_PERMUTATIONS_WITH_SOLUTION: usize = 150;
-pub const MAX_PANELS_LIMIT: usize = 5000;
-pub const MAX_STOCK_PANELS_LIMIT: usize = 5000;
-
 impl CutListOptimizerServiceImpl {
     /// Create a new service instance
     pub fn new() -> Self {
@@ -62,8 +53,8 @@ impl CutListOptimizerServiceImpl {
             task_id_counter: AtomicU64::new(0),
             is_initialized: AtomicBool::new(false),
             is_shutdown: AtomicBool::new(false),
-            thread_semaphore: Arc::new(Semaphore::new(MAX_ACTIVE_THREADS_PER_TASK)),
-            max_threads_per_task: MAX_ACTIVE_THREADS_PER_TASK,
+            thread_semaphore: Arc::new(Semaphore::new(EngineConstants::MAX_ACTIVE_THREADS_PER_TASK)),
+            max_threads_per_task: EngineConstants::MAX_ACTIVE_THREADS_PER_TASK,
             start_time: Utc::now(),
             running_tasks: None,
             watch_dog: None,

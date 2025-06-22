@@ -1,7 +1,9 @@
 //! Request validation utilities
 
-use crate::models::{CalculationRequest, enums::StatusCode};
-use super::core::{MAX_PANELS_LIMIT, MAX_STOCK_PANELS_LIMIT};
+use crate::{
+    models::{CalculationRequest, enums::StatusCode},
+    constants::EngineConstants,
+};
 
 pub struct RequestValidator;
 
@@ -18,7 +20,7 @@ impl RequestValidator {
             return Some(StatusCode::InvalidTiles);
         }
 
-        if panel_count > MAX_PANELS_LIMIT {
+        if panel_count > EngineConstants::MAX_PANELS_LIMIT {
             return Some(StatusCode::TooManyPanels);
         }
 
@@ -32,7 +34,7 @@ impl RequestValidator {
             return Some(StatusCode::InvalidStockTiles);
         }
 
-        if stock_count > MAX_STOCK_PANELS_LIMIT {
+        if stock_count > EngineConstants::MAX_STOCK_PANELS_LIMIT {
             return Some(StatusCode::TooManyStockPanels);
         }
 

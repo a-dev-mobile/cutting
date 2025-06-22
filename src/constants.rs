@@ -33,6 +33,38 @@ impl StockConstants {
     pub const RETRY_SLEEP_MS: u64 = 100;
 }
 
+/// Engine and service configuration constants
+pub struct EngineConstants;
+
+impl EngineConstants {
+    /// Maximum number of permutation iterations allowed in optimization algorithms
+    pub const MAX_PERMUTATION_ITERATIONS: usize = 1000;
+    
+    /// Maximum number of stock iterations for stock solution generation
+    pub const MAX_STOCK_ITERATIONS: usize = 1000;
+    
+    /// Maximum allowed digits for numerical precision in calculations
+    pub const MAX_ALLOWED_DIGITS: usize = 6;
+    
+    /// Size of the thread queue for task processing
+    pub const THREAD_QUEUE_SIZE: usize = 1000;
+    
+    /// Maximum number of active threads per task to prevent resource exhaustion
+    pub const MAX_ACTIVE_THREADS_PER_TASK: usize = 5;
+    
+    /// Maximum number of permutations to generate when a solution is found
+    pub const MAX_PERMUTATIONS_WITH_SOLUTION: usize = 150;
+    
+    /// Maximum number of panels allowed in a single optimization task
+    pub const MAX_PANELS_LIMIT: usize = 5000;
+    
+    /// Maximum number of stock panels allowed in a single optimization task
+    pub const MAX_STOCK_PANELS_LIMIT: usize = 5000;
+    
+    /// Maximum reasonable number of permutations to generate (7!)
+    pub const MAX_PERMUTATIONS: usize = 5040;
+}
+
 /// Configuration default values for cutting optimization
 pub struct ConfigurationDefaults;
 
@@ -105,4 +137,32 @@ pub struct MaterialConstants;
 impl MaterialConstants {
     /// Default material name used across the application when no specific material is specified
     pub const DEFAULT_MATERIAL: &'static str = "DEFAULT";
+}
+
+/// Utility and conversion constants
+pub struct UtilityConstants;
+
+impl UtilityConstants {
+    /// Default epsilon for floating point comparisons
+    pub const DEFAULT_EPSILON: f64 = 1e-10;
+    
+    /// Conversion factor from millimeters to meters
+    pub const MM_TO_M: f64 = 0.001;
+    
+    /// Conversion factor from meters to millimeters
+    pub const M_TO_MM: f64 = 1000.0;
+    
+    /// Conversion factor from inches to millimeters
+    pub const INCHES_TO_MM: f64 = 25.4;
+}
+
+/// Formatting and display constants
+pub struct FormattingConstants;
+
+impl FormattingConstants {
+    /// Units for memory size formatting (bytes, kilobytes, etc.)
+    pub const MEMORY_UNITS: &'static [&'static str] = &["B", "KB", "MB", "GB", "TB"];
+    
+    /// Base for memory size calculations (1024 bytes = 1 KB)
+    pub const MEMORY_BASE: f64 = 1024.0;
 }

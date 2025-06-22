@@ -3,7 +3,7 @@
 //! This module provides helper functions for collecting and calculating
 //! service performance metrics, resource usage, and operational statistics.
 
-use crate::models::Stats;
+use crate::{models::Stats, constants::FormattingConstants};
 
 /// Statistics collection helper functions
 pub struct StatsCollector;
@@ -66,16 +66,15 @@ impl StatsCollector {
 
     /// Format memory size in human-readable format
     pub fn format_memory_size(bytes: u64) -> String {
-        const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
         let mut size = bytes as f64;
         let mut unit_index = 0;
 
-        while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-            size /= 1024.0;
+        while size >= FormattingConstants::MEMORY_BASE && unit_index < FormattingConstants::MEMORY_UNITS.len() - 1 {
+            size /= FormattingConstants::MEMORY_BASE;
             unit_index += 1;
         }
 
-        format!("{:.2} {}", size, UNITS[unit_index])
+        format!("{:.2} {}", size, FormattingConstants::MEMORY_UNITS[unit_index])
     }
 }
 
