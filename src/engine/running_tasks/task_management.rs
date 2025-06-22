@@ -12,7 +12,7 @@ use crate::{
 };
 use parking_lot::RwLock;
 use std::sync::Arc;
-use tracing::{debug, warn};
+use crate::logging::{debug, warn};
 
 use super::structs::RunningTasks;
 

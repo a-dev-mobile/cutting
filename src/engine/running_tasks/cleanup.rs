@@ -8,7 +8,7 @@ use crate::{
     models::enums::Status,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::debug;
+use crate::logging::debug;
 
 use super::{structs::RunningTasks, task_management::TaskManager};
 

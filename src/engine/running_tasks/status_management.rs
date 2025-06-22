@@ -8,7 +8,7 @@ use crate::{
     models::enums::Status,
 };
 use std::sync::atomic::Ordering;
-use tracing::debug;
+use crate::logging::debug;
 
 use super::structs::RunningTasks;
 

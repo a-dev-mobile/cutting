@@ -19,11 +19,11 @@ pub use running_tasks::{
     TaskManager, 
     StatusManager, 
     StatisticsCollector, 
-    TaskCleanup, 
+    TaskCleanup as RunningTasksCleanup, 
     TaskManagerSingleton,
     get_running_tasks_instance,
 };
-pub use watch_dog::WatchDog;
+pub use watch_dog::{WatchDog, WatchDogConfig, TaskMonitor, TaskCleanup as WatchDogTaskCleanup, WatchDogStatistics};
 
 // Re-export stock module for public API compatibility
 pub use stock::*;
