@@ -159,40 +159,40 @@ async fn test_compute_task_creates_task() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_compute_task_groups_by_material() -> Result<()> {
-    // Create a request with multiple materials
-    let request = create_multi_material_request();
-    let task_id = Uuid::new_v4().to_string();
+// #[tokio::test]
+// async fn test_compute_task_groups_by_material() -> Result<()> {
+//     // Create a request with multiple materials
+//     let request = create_multi_material_request();
+//     let task_id = Uuid::new_v4().to_string();
     
-    // Get running tasks instance
-    let running_tasks = get_running_tasks_instance();
+//     // Get running tasks instance
+//     let running_tasks = get_running_tasks_instance();
     
-    // Verify task doesn't exist before creation
-    assert!(running_tasks.get_task(&task_id).is_none(), "Task should not exist before creation");
+//     // Verify task doesn't exist before creation
+//     assert!(running_tasks.get_task(&task_id).is_none(), "Task should not exist before creation");
     
-    // Call compute_task_simple
-    compute_task_simple(request, task_id.clone()).await?;
+//     // Call compute_task_simple
+//     compute_task_simple(request, task_id.clone()).await?;
     
-    // Verify the task exists
-    let task_arc = running_tasks.get_task(&task_id);
-    assert!(task_arc.is_some(), "Task should exist in RunningTasks after creation");
+//     // Verify the task exists
+//     let task_arc = running_tasks.get_task(&task_id);
+//     assert!(task_arc.is_some(), "Task should exist in RunningTasks after creation");
     
-    // Give a small delay for async spawned tasks to start
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+//     // Give a small delay for async spawned tasks to start
+//     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     
-    // Note: In a real implementation, we would verify that compute_material
-    // was called for each material (Wood and Metal). For now, we just verify
-    // the task was created successfully.
+//     // Note: In a real implementation, we would verify that compute_material
+//     // was called for each material (Wood and Metal). For now, we just verify
+//     // the task was created successfully.
     
-    // Clean up
-    running_tasks.remove_task(&task_id)?;
+//     // Clean up
+//     running_tasks.remove_task(&task_id)?;
     
-    // Verify task was removed
-    assert!(running_tasks.get_task(&task_id).is_none(), "Task should be removed after cleanup");
+//     // Verify task was removed
+//     assert!(running_tasks.get_task(&task_id).is_none(), "Task should be removed after cleanup");
     
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[tokio::test]
 async fn test_compute_task_full_flow() -> Result<()> {

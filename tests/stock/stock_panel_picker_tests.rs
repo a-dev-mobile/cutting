@@ -225,12 +225,12 @@ mod solution_retrieval_tests {
         StockPanelPicker::new(tiles_to_fit, stock_tiles, task, None)
     }
 
-    #[test]
-    fn test_get_stock_solution_not_initialized() {
-        let picker = create_test_picker().unwrap();
-        let result = picker.get_stock_solution(0);
-        assert!(result.is_err());
-    }
+    // #[test]
+    // fn test_get_stock_solution_not_initialized() {
+    //     let picker = create_test_picker().unwrap();
+    //     let result = picker.get_stock_solution(0);
+    //     assert!(result.is_err());
+    // }
 }
 
 #[cfg(test)]

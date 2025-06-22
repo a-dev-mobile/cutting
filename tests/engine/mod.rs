@@ -17,3 +17,4 @@ pub mod watch_dog_cleanup_tests;
 pub mod watch_dog_core_tests;
 pub mod watch_dog_monitoring_tests;
 pub mod watch_dog_statistics_tests;
+pub mod debug_single_thread_tests;

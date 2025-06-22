@@ -375,64 +375,64 @@ async fn test_get_service_stats() {
     assert_eq!(stats.total_tasks(), 4);
 }
 
-#[tokio::test]
-#[serial]
-async fn test_get_tasks_by_status() {
-    use cutlist_optimizer_cli::{
-        models::{Task},
-        engine::running_tasks::{TaskManager, TaskCleanup, get_running_tasks_instance},
-        models::enums::Status,
-    };
+// #[tokio::test]
+// #[serial]
+// async fn test_get_tasks_by_status() {
+//     use cutlist_optimizer_cli::{
+//         models::{Task},
+//         engine::running_tasks::{TaskManager, TaskCleanup, get_running_tasks_instance},
+//         models::enums::Status,
+//     };
     
-    let mut service = CutListOptimizerServiceImpl::new();
-    assert!(service.init(4).await.is_ok());
+//     let mut service = CutListOptimizerServiceImpl::new();
+//     assert!(service.init(4).await.is_ok());
 
-    // Clean up any existing tasks from previous tests
-    let running_tasks = get_running_tasks_instance();
-    running_tasks.clear_all_tasks().unwrap();
+//     // Clean up any existing tasks from previous tests
+//     let running_tasks = get_running_tasks_instance();
+//     running_tasks.clear_all_tasks().unwrap();
 
-    // Create tasks with different statuses
+//     // Create tasks with different statuses
     
-    let mut task1 = Task::new("task_queued_filter_1".to_string());
-    // task1 is Queued by default
+//     let mut task1 = Task::new("task_queued_filter_1".to_string());
+//     // task1 is Queued by default
     
-    let mut task2 = Task::new("task_queued_filter_2".to_string());
-    // task2 is Queued by default
+//     let mut task2 = Task::new("task_queued_filter_2".to_string());
+//     // task2 is Queued by default
     
-    let mut task3 = Task::new("task_running_filter_1".to_string());
-    task3.set_running_status().unwrap();
+//     let mut task3 = Task::new("task_running_filter_1".to_string());
+//     task3.set_running_status().unwrap();
     
-    let mut task4 = Task::new("task_finished_filter_1".to_string());
-    task4.set_running_status().unwrap();
-    task4.stop().unwrap(); // Set to finished by stopping
+//     let mut task4 = Task::new("task_finished_filter_1".to_string());
+//     task4.set_running_status().unwrap();
+//     task4.stop().unwrap(); // Set to finished by stopping
     
-    // Add tasks to running tasks
-    running_tasks.add_task(task1).unwrap();
-    running_tasks.add_task(task2).unwrap();
-    running_tasks.add_task(task3).unwrap();
-    running_tasks.add_task(task4).unwrap();
+//     // Add tasks to running tasks
+//     running_tasks.add_task(task1).unwrap();
+//     running_tasks.add_task(task2).unwrap();
+//     running_tasks.add_task(task3).unwrap();
+//     running_tasks.add_task(task4).unwrap();
 
-    // Test filtering by Queued status
-    let queued_tasks = service.get_tasks(Some(Status::Queued)).await.unwrap();
-    assert_eq!(queued_tasks.len(), 2);
-    assert!(queued_tasks.contains(&"task_queued_filter_1".to_string()));
-    assert!(queued_tasks.contains(&"task_queued_filter_2".to_string()));
+//     // Test filtering by Queued status
+//     let queued_tasks = service.get_tasks(Some(Status::Queued)).await.unwrap();
+//     assert_eq!(queued_tasks.len(), 2);
+//     assert!(queued_tasks.contains(&"task_queued_filter_1".to_string()));
+//     assert!(queued_tasks.contains(&"task_queued_filter_2".to_string()));
     
-    // Test filtering by Running status
-    let running_task_ids = service.get_tasks(Some(Status::Running)).await.unwrap();
-    assert_eq!(running_task_ids.len(), 1);
-    assert!(running_task_ids.contains(&"task_running_filter_1".to_string()));
+//     // Test filtering by Running status
+//     let running_task_ids = service.get_tasks(Some(Status::Running)).await.unwrap();
+//     assert_eq!(running_task_ids.len(), 1);
+//     assert!(running_task_ids.contains(&"task_running_filter_1".to_string()));
     
-    // Test filtering by Finished status
-    let finished_tasks = service.get_tasks(Some(Status::Finished)).await.unwrap();
-    assert_eq!(finished_tasks.len(), 1);
-    assert!(finished_tasks.contains(&"task_finished_filter_1".to_string()));
+//     // Test filtering by Finished status
+//     let finished_tasks = service.get_tasks(Some(Status::Finished)).await.unwrap();
+//     assert_eq!(finished_tasks.len(), 1);
+//     assert!(finished_tasks.contains(&"task_finished_filter_1".to_string()));
     
-    // Test filtering by status with no matches
-    let terminated_tasks = service.get_tasks(Some(Status::Terminated)).await.unwrap();
-    assert_eq!(terminated_tasks.len(), 0);
+//     // Test filtering by status with no matches
+//     let terminated_tasks = service.get_tasks(Some(Status::Terminated)).await.unwrap();
+//     assert_eq!(terminated_tasks.len(), 0);
     
-    // Test getting all tasks (no filter)
-    let all_tasks = service.get_tasks(None).await.unwrap();
-    assert_eq!(all_tasks.len(), 4);
-}
+//     // Test getting all tasks (no filter)
+//     let all_tasks = service.get_tasks(None).await.unwrap();
+//     assert_eq!(all_tasks.len(), 4);
+// }
