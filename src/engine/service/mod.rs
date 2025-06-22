@@ -1,21 +1,16 @@
 //! Service layer for the CutList Optimizer
-//!
-//! This module provides the main service implementation for cut list optimization,
-//! including task management, computation, and status monitoring.
 
-pub mod core;
-pub mod task_submission;
-pub mod task_control;
-pub mod statistics;
-pub mod lifecycle;
-pub mod implementation;
-pub mod computation;
+pub mod trait_def;           // Trait definition
+pub mod core;               // Only structure and utilities
+pub mod trait_impl;         // Complete trait implementation
+pub mod task_management;    // Task monitoring utilities
+pub mod service_management; // Statistics collection utilities
+pub mod computation;        // Computational logic
+pub mod validation;         // Validation utilities
 
-// Re-export main service implementation
+// Re-exports
+pub use trait_def::CutListOptimizerService;
 pub use core::CutListOptimizerServiceImpl;
-pub use implementation::*;
-pub use task_submission::*;
-pub use task_control::*;
-pub use statistics::*;
-pub use lifecycle::*;
-pub use computation::*;
+pub use validation::RequestValidator;
+pub use task_management::TaskMonitor;
+pub use service_management::StatsCollector;

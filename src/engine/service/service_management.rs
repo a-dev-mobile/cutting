@@ -1,31 +1,4 @@
-//! Statistics and health operations
-//!
-//! This module handles service statistics gathering and health monitoring operations.
-
-use crate::{
-    errors::Result,
-    models::Stats,
-};
-
-use super::core::CutListOptimizerServiceImpl;
-
-/// Statistics and health operations implementation
-impl CutListOptimizerServiceImpl {
-    /// Get comprehensive statistics about the service
-    pub async fn get_stats_impl(&self) -> Result<Stats> {
-        self.ensure_initialized()?;
-        self.ensure_not_shutdown()?;
-
-        // TODO: Implement actual statistics gathering
-        // This should include:
-        // 1. Query running tasks for current counts
-        // 2. Get performance metrics
-        // 3. Calculate throughput statistics
-        // 4. Return comprehensive stats
-
-        Ok(Stats::new())
-    }
-}
+//! Service lifecycle and configuration management
 
 /// Statistics collection utilities
 pub mod stats_collector {

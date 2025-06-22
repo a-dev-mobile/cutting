@@ -5,7 +5,7 @@
 
 pub mod dimension_utils;
 pub mod grouping;
-pub mod main_compute;
+pub mod task_compute;
 pub mod material_compute;
 pub mod permutation_utils;
 

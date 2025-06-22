@@ -1,8 +1,8 @@
 //! Tests for CutListOptimizerServiceImpl
 
 use cutlist_optimizer_cli::{
-    engine::CutListOptimizerServiceImpl,
-    models::{CalculationRequest, Panel, Configuration},
+    engine::service::{CutListOptimizerService, CutListOptimizerServiceImpl},
+    models::{CalculationRequest},
     models::enums::StatusCode,
 };
 

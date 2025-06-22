@@ -1,10 +1,8 @@
 //! Tests for CutListOptimizerServiceImpl and related functionality
 
-use cutlist_optimizer_cli::engine::CutListOptimizerServiceImpl;
-use cutlist_optimizer_cli::errors::Result;
+use cutlist_optimizer_cli::engine::service::{CutListOptimizerService, CutListOptimizerServiceImpl};
 use cutlist_optimizer_cli::models::{
-    CalculationRequest, CalculationSubmissionResult, TaskStatusResponse, Stats,
-    enums::{Status, StatusCode},
+    enums::Status,
 };
 
 #[tokio::test]

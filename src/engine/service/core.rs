@@ -1,7 +1,5 @@
 //! Core service implementation
-//!
-//! This module contains the main service struct and its core functionality,
-//! including initialization, configuration, and basic state management.
+//! This module contains only the main service struct and basic utilities
 
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
