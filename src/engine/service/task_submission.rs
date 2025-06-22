@@ -2,25 +2,18 @@
 //!
 //! This module handles task submission and all related validation logic.
 
-use chrono::Utc;
-
 use crate::{
     errors::Result,
     models::{
         CalculationRequest, CalculationSubmissionResult,
         enums::StatusCode,
-        tile_dimensions::structs::TileDimensions,
-        configuration::structs::Configuration,
-        task::structs::Task,
-        panel::structs::Panel,
-        enums::Orientation,
     },
-    logging::macros::{info, error, debug},
+    logging::macros::{error},
 };
 
 use super::{
-    core::{CutListOptimizerServiceImpl, MAX_PANELS_LIMIT, MAX_STOCK_PANELS_LIMIT, MAX_ALLOWED_DIGITS},
-    computation::grouping::CollectionUtils,
+    core::{CutListOptimizerServiceImpl, MAX_PANELS_LIMIT, MAX_STOCK_PANELS_LIMIT},
+    computation::main_compute,
 };
 
 /// Task submission operations implementation
@@ -52,7 +45,7 @@ impl CutListOptimizerServiceImpl {
         let task_id_clone = task_id.clone();
         
         tokio::spawn(async move {
-            if let Err(e) = Self::compute_task(request_clone, task_id_clone).await {
+            if let Err(e) = main_compute::compute_task(request_clone, task_id_clone).await {
                 error!("Task computation failed: {}", e);
             }
         });
@@ -71,152 +64,7 @@ impl CutListOptimizerServiceImpl {
         Ok(None)
     }
 
-    /// Main computation method (migrated from Java)
-    async fn compute_task(request: CalculationRequest, task_id: String) -> Result<()> {
-        info!("Starting computation for task: {}", task_id);
 
-        // Convert panels to tile dimensions with scaling factor
-        let (tiles, stock_tiles, _factor) = Self::convert_panels_to_tiles(&request)?;
-
-        // Create task
-        let task = Task::new(task_id.clone());
-        
-        // Group tiles by material
-        let tiles_per_material = CollectionUtils::get_tile_dimensions_per_material(&tiles)?;
-        let stock_per_material = CollectionUtils::get_tile_dimensions_per_material(&stock_tiles)?;
-
-        // Process each material
-        for (material, material_tiles) in tiles_per_material {
-            if let Some(material_stock) = stock_per_material.get(&material) {
-                Self::compute_material(
-                    material_tiles,
-                    material_stock.clone(),
-                    request.configuration.as_ref(),
-                    &task,
-                    &material,
-                ).await?;
-            }
-        }
-
-        info!("Completed computation for task: {}", task_id);
-        Ok(())
-    }
-
-    /// Convert panels to tile dimensions with proper scaling
-    fn convert_panels_to_tiles(request: &CalculationRequest) -> Result<(Vec<TileDimensions>, Vec<TileDimensions>, f64)> {
-        let mut tiles = Vec::new();
-        let mut stock_tiles = Vec::new();
-
-        // Calculate scaling factor based on decimal places (like Java)
-        let max_decimal_places = Self::get_max_decimal_places(&request.panels, &request.stock_panels);
-        let factor = 10.0_f64.powi(max_decimal_places as i32);
-
-        // Convert regular panels
-        for panel in &request.panels {
-            if panel.is_valid()? {
-                for _ in 0..panel.count {
-                    let width_str = panel.width.as_ref().ok_or_else(|| crate::errors::AppError::invalid_input("Panel width is None"))?;
-                    let height_str = panel.height.as_ref().ok_or_else(|| crate::errors::AppError::invalid_input("Panel height is None"))?;
-                    
-                    let width = (width_str.parse::<f64>().map_err(|e| crate::errors::AppError::Core(crate::errors::CoreError::ParseFloat(e)))? * factor).round() as i32;
-                    let height = (height_str.parse::<f64>().map_err(|e| crate::errors::AppError::Core(crate::errors::CoreError::ParseFloat(e)))? * factor).round() as i32;
-                    
-                    let mut tile = TileDimensions::new(panel.id, width, height);
-                    tile.material = panel.material.clone();
-                    tile.orientation = Self::convert_orientation(panel.orientation);
-                    tile.label = panel.label.clone();
-                    
-                    tiles.push(tile);
-                }
-            }
-        }
-
-        // Convert stock panels
-        for panel in &request.stock_panels {
-            if panel.is_valid()? {
-                for _ in 0..panel.count {
-                    let width_str = panel.width.as_ref().ok_or_else(|| crate::errors::AppError::invalid_input("Panel width is None"))?;
-                    let height_str = panel.height.as_ref().ok_or_else(|| crate::errors::AppError::invalid_input("Panel height is None"))?;
-                    
-                    let width = (width_str.parse::<f64>().map_err(|e| crate::errors::AppError::Core(crate::errors::CoreError::ParseFloat(e)))? * factor).round() as i32;
-                    let height = (height_str.parse::<f64>().map_err(|e| crate::errors::AppError::Core(crate::errors::CoreError::ParseFloat(e)))? * factor).round() as i32;
-                    
-                    let mut tile = TileDimensions::new(panel.id, width, height);
-                    tile.material = panel.material.clone();
-                    tile.orientation = Self::convert_orientation(panel.orientation);
-                    tile.label = panel.label.clone();
-                    
-                    stock_tiles.push(tile);
-                }
-            }
-        }
-
-        Ok((tiles, stock_tiles, factor))
-    }
-
-    /// Get maximum decimal places from panels
-    fn get_max_decimal_places(panels: &[Panel], stock_panels: &[Panel]) -> usize {
-        let mut max_decimal = 0;
-
-        for panel in panels.iter().chain(stock_panels.iter()) {
-            if panel.is_valid().unwrap_or(false) {
-                if let Some(width_str) = &panel.width {
-                    max_decimal = max_decimal.max(Self::count_decimal_places(width_str));
-                }
-                if let Some(height_str) = &panel.height {
-                    max_decimal = max_decimal.max(Self::count_decimal_places(height_str));
-                }
-            }
-        }
-
-        max_decimal.min(MAX_ALLOWED_DIGITS)
-    }
-
-    /// Count decimal places in a string number
-    fn count_decimal_places(value: &str) -> usize {
-        if let Some(dot_pos) = value.find('.') {
-            value.len() - dot_pos - 1
-        } else {
-            0
-        }
-    }
-
-    /// Convert integer orientation to Orientation enum
-    fn convert_orientation(orientation: i32) -> Orientation {
-        match orientation {
-            0 => Orientation::Any,
-            1 => Orientation::Horizontal,
-            2 => Orientation::Vertical,
-            _ => Orientation::Any,
-        }
-    }
-
-    /// Compute optimization for a specific material
-    async fn compute_material(
-        tiles: Vec<TileDimensions>,
-        stock_tiles: Vec<TileDimensions>,
-        _configuration: Option<&Configuration>,
-        task: &Task,
-        material: &str,
-    ) -> Result<()> {
-        debug!("Computing material: {} with {} tiles and {} stock tiles", 
-               material, tiles.len(), stock_tiles.len());
-
-        // Generate groups (like Java implementation)
-        let groups = CollectionUtils::generate_groups(&tiles, &stock_tiles, task)?;
-        
-        // TODO: Implement full permutation processing logic
-        // This would include:
-        // 1. Generate permutations
-        // 2. Stock solution generation
-        // 3. Cut list thread spawning
-        // 4. Solution comparison and ranking
-        
-        // For now, just log the progress
-        debug!("Generated {} groups for material {}", groups.len(), material);
-
-        Ok(())
-    }
 }
 
 /// Request validation utilities

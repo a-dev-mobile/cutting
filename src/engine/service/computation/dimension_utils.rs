@@ -3,8 +3,6 @@
 //! This module contains utilities for working with dimensions, decimal places,
 //! and numeric validation for tiles and panels.
 
-use std::collections::HashMap;
-
 use crate::{
     errors::{Result, AppError},
     models::{
@@ -204,7 +202,7 @@ impl DimensionUtils {
     pub fn convert_panels_to_tiles(
         panels: &[Panel], 
         stock_panels: &[Panel],
-        max_allowed_digits: usize
+        _max_allowed_digits: usize
     ) -> Result<(Vec<TileDimensions>, Vec<TileDimensions>, f64)> {
         let mut tiles = Vec::new();
         let mut stock_tiles = Vec::new();
@@ -284,39 +282,4 @@ impl DimensionUtils {
         }
     }
 
-    /// Get tile dimensions per material
-    /// 
-    /// Groups tiles by their material property for material-specific optimization.
-    pub fn get_tile_dimensions_per_material(tiles: &[TileDimensions]) -> Result<HashMap<String, Vec<TileDimensions>>> {
-        if tiles.is_empty() {
-            return Err(AppError::invalid_input("Tiles array cannot be empty"));
-        }
-
-        let mut result = HashMap::new();
-        
-        for tile in tiles {
-            result.entry(tile.material.clone())
-                .or_insert_with(Vec::new)
-                .push(tile.clone());
-        }
-        
-        Ok(result)
-    }
-
-    /// Get distinct grouped tile dimensions
-    pub fn get_distinct_grouped_tile_dimensions<T: std::hash::Hash + Eq + Clone>(
-        items: &[T]
-    ) -> Result<HashMap<T, i32>> {
-        if items.is_empty() {
-            return Err(AppError::invalid_input("Items array cannot be empty"));
-        }
-
-        let mut result = HashMap::new();
-        
-        for item in items {
-            *result.entry(item.clone()).or_insert(0) += 1;
-        }
-        
-        Ok(result)
-    }
 }
