@@ -149,11 +149,18 @@ impl CutListOptimizerServiceImpl {
 
     /// Shutdown the service gracefully
     /// 
-    /// This method corresponds to the Java `shutdown()` method.
-    /// It stops all running tasks and cleans up resources.
+    /// This method stops all running tasks and cleans up resources.
+    /// It corresponds to the Java `shutdown()` method.
     pub async fn shutdown(&mut self) -> Result<()> {
         // Set shutdown status
         self.set_shutdown(true);
+
+        // TODO: Implement graceful shutdown:
+        // 1. Stop accepting new tasks
+        // 2. Wait for running tasks to complete (with timeout)
+        // 3. Force terminate remaining tasks if needed
+        // 4. Clean up resources and connections
+        // 5. Save any persistent state
 
         Ok(())
     }

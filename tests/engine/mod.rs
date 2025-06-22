@@ -3,6 +3,7 @@
 pub mod cut_list_thread_tests;
 pub mod service_tests;
 pub mod service_impl_tests;
+pub mod service_integration_tests;
 pub mod service_decimal_places_tests;
 pub mod collection_utils_tests;
 pub mod decimal_place_counter_tests;
