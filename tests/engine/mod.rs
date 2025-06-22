@@ -1,6 +1,7 @@
 //! Engine tests module
 
 pub mod cut_list_thread_tests;
+pub mod service;
 pub mod service_tests;
 pub mod service_impl_tests;
 pub mod service_integration_tests;
