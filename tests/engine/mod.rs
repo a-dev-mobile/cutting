@@ -4,7 +4,7 @@ pub mod cut_list_thread_tests;
 pub mod service_tests;
 pub mod service_impl_tests;
 pub mod service_decimal_places_tests;
-pub mod service_core_fixed_tests;
+pub mod collection_utils_tests;
 pub mod decimal_place_counter_tests;
 pub mod running_tasks_tests;
 pub mod watch_dog_tests;

@@ -18,7 +18,10 @@ use crate::{
     logging::macros::{info, error, debug},
 };
 
-use super::core::{CutListOptimizerServiceImpl, MAX_PANELS_LIMIT, MAX_STOCK_PANELS_LIMIT, MAX_ALLOWED_DIGITS};
+use super::{
+    core::{CutListOptimizerServiceImpl, MAX_PANELS_LIMIT, MAX_STOCK_PANELS_LIMIT, MAX_ALLOWED_DIGITS},
+    collection_utils::CollectionUtils,
+};
 
 /// Task lifecycle operations implementation
 impl CutListOptimizerServiceImpl {
@@ -109,9 +112,8 @@ impl CutListOptimizerServiceImpl {
         let task = Task::new(task_id.clone());
         
         // Group tiles by material
-        let service = CutListOptimizerServiceImpl::new();
-        let tiles_per_material = service.get_tile_dimensions_per_material(&tiles);
-        let stock_per_material = service.get_tile_dimensions_per_material(&stock_tiles);
+        let tiles_per_material = CollectionUtils::get_tile_dimensions_per_material(&tiles)?;
+        let stock_per_material = CollectionUtils::get_tile_dimensions_per_material(&stock_tiles)?;
 
         // Process each material
         for (material, material_tiles) in tiles_per_material {
@@ -231,8 +233,7 @@ impl CutListOptimizerServiceImpl {
                material, tiles.len(), stock_tiles.len());
 
         // Generate groups (like Java implementation)
-        let service = CutListOptimizerServiceImpl::new();
-        let groups = service.generate_groups(&tiles, &stock_tiles, task);
+        let groups = CollectionUtils::generate_groups(&tiles, &stock_tiles, task)?;
         
         // TODO: Implement full permutation processing logic
         // This would include:

@@ -1,4 +1,4 @@
-//! Core service implementation structure
+//! Core service implementation
 //!
 //! This module contains the main service struct and its core functionality,
 //! including initialization, configuration, and basic state management.
@@ -9,15 +9,13 @@ use std::sync::{
 };
 use tokio::sync::{Semaphore, mpsc, Mutex};
 use chrono::{DateTime, Utc};
-use std::collections::HashMap;
+use tracing::trace;
 
 use crate::{
     errors::Result,
     models::{
         tile_dimensions::structs::TileDimensions,
-        grouped_tile_dimensions::structs::GroupedTileDimensions,
         panel::structs::Panel,
-        task::structs::Task,
     },
     engine::{
         watch_dog::core::WatchDog,
@@ -198,111 +196,6 @@ impl CutListOptimizerServiceImpl {
         removed_count
     }
 
-    /// Check if optimization is one-dimensional (ported from Java)
-    pub(crate) fn is_one_dimensional_optimization(&self, tiles: &[TileDimensions], stock_tiles: &[TileDimensions]) -> bool {
-        let mut common_dimensions = Vec::new();
-        
-        if let Some(first_tile) = tiles.first() {
-            common_dimensions.push(first_tile.width);
-            common_dimensions.push(first_tile.height);
-        }
-        
-        // Check tiles
-        for tile in tiles {
-            common_dimensions.retain(|&dim| dim == tile.width || dim == tile.height);
-            if common_dimensions.is_empty() {
-                return false;
-            }
-        }
-        
-        // Check stock tiles
-        for tile in stock_tiles {
-            common_dimensions.retain(|&dim| dim == tile.width || dim == tile.height);
-            if common_dimensions.is_empty() {
-                return false;
-            }
-        }
-        
-        true
-    }
-
-    /// Generate groups for tiles (ported from Java)
-    pub(crate) fn generate_groups(&self, tiles: &[TileDimensions], stock_tiles: &[TileDimensions], task: &Task) -> Vec<GroupedTileDimensions> {
-        let mut tile_counts = HashMap::new();
-        
-        // Count occurrences of each tile type
-        for tile in tiles {
-            let key = tile.dimensions_string();
-            *tile_counts.entry(key).or_insert(0) += 1;
-        }
-        
-        // Log tile information
-        let mut log_message = String::new();
-        for (tile_str, count) in &tile_counts {
-            log_message.push_str(&format!("{}*{} ", tile_str, count));
-        }
-        
-        println!("Task[{}] TotalNbrTiles[{}] Tiles: {}", task.id, tiles.len(), log_message);
-        
-        let max_group_size = std::cmp::max(tiles.len() / 100, 1);
-        let is_one_dimensional = self.is_one_dimensional_optimization(tiles, stock_tiles);
-        
-        let group_size_limit = if is_one_dimensional {
-            println!("Task[{}] is one dimensional optimization", task.id);
-            1
-        } else {
-            max_group_size
-        };
-        
-        let mut result = Vec::new();
-        let mut group_counts = HashMap::new();
-        let mut current_group = 0;
-        
-        for tile in tiles {
-            let group_key = format!("{}{}", tile.dimensions_string(), current_group);
-            let current_count = group_counts.entry(group_key.clone()).or_insert(0);
-            *current_count += 1;
-            
-            result.push(GroupedTileDimensions::from_tile_dimensions(tile.clone(), current_group));
-            
-            let total_for_tile = tile_counts.get(&tile.dimensions_string()).unwrap_or(&0);
-            if *total_for_tile > group_size_limit && *current_count > total_for_tile / 4 {
-                println!("Task[{}] Splitting panel set [{}] with [{}] units into two groups", 
-                    task.id, tile.dimensions_string(), total_for_tile);
-                current_group += 1;
-            }
-        }
-        
-        result
-    }
-
-    /// Get distinct grouped tile dimensions (ported from Java)
-    pub(crate) fn get_distinct_grouped_tile_dimensions<T: std::hash::Hash + Eq + Clone>(
-        &self, 
-        items: &[T]
-    ) -> HashMap<T, i32> {
-        let mut result = HashMap::new();
-        
-        for item in items {
-            *result.entry(item.clone()).or_insert(0) += 1;
-        }
-        
-        result
-    }
-
-    /// Get tile dimensions per material (ported from Java)
-    pub(crate) fn get_tile_dimensions_per_material(&self, tiles: &[TileDimensions]) -> HashMap<String, Vec<TileDimensions>> {
-        let mut result = HashMap::new();
-        
-        for tile in tiles {
-            result.entry(tile.material.clone())
-                .or_insert_with(Vec::new)
-                .push(tile.clone());
-        }
-        
-        result
-    }
-
     /// Get number of decimal places in a string (delegated to DecimalPlaceCounter)
     pub fn get_nbr_decimal_places(&self, value: &str) -> usize {
         super::decimal_places::DecimalPlaceCounter::get_nbr_decimal_places(value)
@@ -324,7 +217,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Check if thread is eligible to start (ported from Java)
-    pub(crate) fn is_thread_eligible_to_start(&self, _group: &str, _task: &Task, _material: &str) -> bool {
+    pub(crate) fn is_thread_eligible_to_start(&self, _group: &str, _task: &crate::models::task::structs::Task, _material: &str) -> bool {
         // Simplified implementation - in full version would check thread group rankings
         true
     }
@@ -411,7 +304,7 @@ impl ProgressTracker {
 
     pub fn refresh_task_status_info(&self) {
         // Implementation for refreshing task status
-        println!("Refreshing task status for task[{}] material[{}]", self.task_id, self.material);
+        trace!("Refreshing task status for task[{}] material[{}]", self.task_id, self.material);
     }
 }
 
