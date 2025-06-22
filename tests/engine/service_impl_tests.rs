@@ -327,11 +327,7 @@ async fn test_get_stats() {
 
     // Clean up any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // Create several tasks with different statuses
     
@@ -386,11 +382,7 @@ async fn test_get_tasks_by_status() {
 
     // Clean up any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // Create tasks with different statuses
     

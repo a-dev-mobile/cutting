@@ -22,6 +22,9 @@ pub trait TaskCleanup {
     
     /// Clean up all finished tasks regardless of age
     fn cleanup_all_finished_tasks(&self) -> Result<usize>;
+    
+    /// Clear all tasks from the running tasks collection (for testing)
+    fn clear_all_tasks(&self) -> Result<usize>;
 }
 
 impl TaskCleanup for RunningTasks {
@@ -124,6 +127,38 @@ impl TaskCleanup for RunningTasks {
         
         if removed_count > 0 {
             debug!("Cleaned up {} finished tasks", removed_count);
+        }
+        
+        Ok(removed_count)
+    }
+    
+    /// Clear all tasks from the running tasks collection (for testing)
+    fn clear_all_tasks(&self) -> Result<usize> {
+        let mut removed_count = 0;
+        let mut tasks_to_remove = Vec::new();
+        
+        // Collect all tasks to remove
+        for entry in self.tasks.iter() {
+            tasks_to_remove.push(entry.key().clone());
+        }
+        
+        // Remove all tasks
+        for task_id in tasks_to_remove {
+            if self.remove_task(&task_id)?.is_some() {
+                removed_count += 1;
+            }
+        }
+        
+        // Reset all counters to zero
+        use std::sync::atomic::Ordering;
+        self.nbr_idle_tasks.store(0, Ordering::Relaxed);
+        self.nbr_running_tasks.store(0, Ordering::Relaxed);
+        self.nbr_finished_tasks.store(0, Ordering::Relaxed);
+        self.nbr_terminated_tasks.store(0, Ordering::Relaxed);
+        self.nbr_error_tasks.store(0, Ordering::Relaxed);
+        
+        if removed_count > 0 {
+            debug!("Cleared all {} tasks from running tasks", removed_count);
         }
         
         Ok(removed_count)

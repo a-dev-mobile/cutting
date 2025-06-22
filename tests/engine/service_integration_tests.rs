@@ -111,11 +111,7 @@ fn create_invalid_request() -> CalculationRequest {
 async fn test_full_pipeline() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // 1. Create service and initialize
     let mut service = CutListOptimizerServiceImpl::new();
@@ -222,11 +218,7 @@ async fn test_full_pipeline() {
 async fn test_pipeline_with_invalid_request() {
     // Clear any existing tasks
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // Initialize service
     let mut service = CutListOptimizerServiceImpl::new();
@@ -251,11 +243,7 @@ async fn test_pipeline_with_invalid_request() {
 async fn test_multiple_tasks_pipeline() {
     // Clear any existing tasks
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // Initialize service with multiple tasks allowed
     let mut service = CutListOptimizerServiceImpl::new();
@@ -320,11 +308,7 @@ async fn test_multiple_tasks_pipeline() {
 async fn test_task_stop_pipeline() {
     // Clear any existing tasks
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // Initialize service
     let mut service = CutListOptimizerServiceImpl::new();
@@ -368,11 +352,7 @@ async fn test_task_stop_pipeline() {
 async fn test_stats_during_pipeline() {
     // Clear any existing tasks
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
 
     // Initialize service
     let mut service = CutListOptimizerServiceImpl::new();

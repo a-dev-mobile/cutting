@@ -12,11 +12,7 @@ use cutlist_optimizer_cli::models::{
 async fn test_service_creation() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
     
     let service = CutListOptimizerServiceImpl::new();
     
@@ -29,11 +25,7 @@ async fn test_service_creation() {
 async fn test_service_basic_operations() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    running_tasks.clear_all_tasks().unwrap();
     
     let mut service = CutListOptimizerServiceImpl::new();
     
@@ -57,11 +49,7 @@ async fn test_service_basic_operations() {
 async fn test_task_operations() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    let _ = running_tasks.clear_all_tasks();
     
     let mut service = CutListOptimizerServiceImpl::new();
     service.init(4).await.unwrap();
@@ -84,11 +72,7 @@ async fn test_task_operations() {
 async fn test_init_service() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    let _ = running_tasks.clear_all_tasks();
     
     let mut service = CutListOptimizerServiceImpl::new();
     
@@ -125,11 +109,7 @@ async fn test_init_service() {
 async fn test_service_destroy() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
-    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    let _ = running_tasks.clear_all_tasks();
     
     let mut service = CutListOptimizerServiceImpl::new();
     

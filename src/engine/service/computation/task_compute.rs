@@ -28,7 +28,7 @@ use tokio::task::JoinHandle;
 /// 
 /// This function implements the core logic from the Java CutListOptimizerServiceImpl.compute() method:
 /// 1. Converts panels to tiles using DimensionUtils
-/// 2. Gets the existing task from RunningTasks (already created in submit_task)
+/// 2. Gets or creates the task in RunningTasks
 /// 3. Updates task with computation data
 /// 4. Groups tiles by material using CollectionUtils
 /// 5. Spawns async computation for each material
@@ -42,10 +42,19 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
         6 // MAX_ALLOWED_DIGITS from Java
     )?;
 
-    // Get the existing task from running tasks (already created in submit_task)
+    // Get or create the task in running tasks
     let running_tasks = get_running_tasks_instance();
-    let task_arc = running_tasks.get_task(&task_id)
-        .ok_or_else(|| AppError::invalid_input(&format!("Task {} not found in running tasks", task_id)))?;
+    let task_arc = if let Some(existing_task) = running_tasks.get_task(&task_id) {
+        // Task already exists (normal case from submit_task)
+        existing_task
+    } else {
+        // Task doesn't exist, create it (for direct testing)
+        let mut task = Task::new(task_id.clone());
+        task.calculation_request = Some(request.clone());
+        running_tasks.add_task(task)?;
+        running_tasks.get_task(&task_id)
+            .ok_or_else(|| AppError::invalid_input(&format!("Failed to create task {}", task_id)))?
+    };
     
     // Update task with computation data and set to running status
     {
