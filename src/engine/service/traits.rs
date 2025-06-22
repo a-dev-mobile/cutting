@@ -1,6 +1,6 @@
-//! CutList Optimizer Service trait definition
+//! CutList Optimizer Service trait definitions
 //!
-//! This module defines the main service interface for the cutting optimization engine,
+//! This module defines the main service interfaces for the cutting optimization engine,
 //! providing async methods for task management and monitoring.
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
 /// # Examples
 /// 
 /// ```rust
-/// use cutlist_optimizer_cli::engine::CutListOptimizerService;
+/// use cutlist_optimizer_cli::engine::service::CutListOptimizerService;
 /// use cutlist_optimizer_cli::models::{CalculationRequest, enums::Status};
 /// 
 /// async fn example_usage<T: CutListOptimizerService>(service: &T) -> Result<(), Box<dyn std::error::Error>> {
@@ -150,7 +150,7 @@ pub struct TaskDetails {
     pub task_id: String,
     pub client_id: String,
     pub status: Status,
-    pub progress_percentage: i32,
+    pub progress_percentage: u8,
     pub start_time: chrono::DateTime<chrono::Utc>,
     pub end_time: Option<chrono::DateTime<chrono::Utc>>,
     pub thread_count: i32,
