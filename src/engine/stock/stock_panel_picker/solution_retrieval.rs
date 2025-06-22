@@ -20,6 +20,7 @@ impl StockPanelPicker {
     /// * `Err(...)` - If an error occurs during retrieval
     pub fn get_stock_solution(&self, index: usize) -> Result<Option<StockSolution>> {
         // Check if thread is initialized
+      
         if !self.is_initialized()? {
             return Err(AppError::stock_panel_picker_not_initialized());
         }

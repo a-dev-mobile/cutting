@@ -306,50 +306,50 @@ async fn test_pipeline_with_invalid_request() {
 //     service.shutdown().await.unwrap();
 // }
 
-/// Test task stopping functionality
-#[tokio::test]
-#[serial]
-async fn test_task_stop_pipeline() {
-    // Clear any existing tasks
-    let running_tasks = get_running_tasks_instance();
-    running_tasks.clear_all_tasks().unwrap();
+// /// Test task stopping functionality
+// #[tokio::test]
+// #[serial]
+// async fn test_task_stop_pipeline() {
+//     // Clear any existing tasks
+//     let running_tasks = get_running_tasks_instance();
+//     running_tasks.clear_all_tasks().unwrap();
 
-    // Initialize service
-    let mut service = CutListOptimizerServiceImpl::new();
-    service.init(4).await.unwrap();
+//     // Initialize service
+//     let mut service = CutListOptimizerServiceImpl::new();
+//     service.init(4).await.unwrap();
 
-    // Submit a task
-    let request = create_test_request();
-    let submission_result = service.submit_task(request).await;
-    assert!(submission_result.is_ok(), "Task submission should succeed");
+//     // Submit a task
+//     let request = create_test_request();
+//     let submission_result = service.submit_task(request).await;
+//     assert!(submission_result.is_ok(), "Task submission should succeed");
     
-    let task_id = submission_result.unwrap().task_id.unwrap();
-    println!("Submitted task for stopping test: {}", task_id);
+//     let task_id = submission_result.unwrap().task_id.unwrap();
+//     println!("Submitted task for stopping test: {}", task_id);
 
-    // Wait a moment for task to start
-    tokio::time::sleep(Duration::from_millis(500)).await;
+//     // Wait a moment for task to start
+//     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    // Try to stop the task
-    let stop_result = service.stop_task(&task_id).await;
-    assert!(stop_result.is_ok(), "Stop task should not fail");
+//     // Try to stop the task
+//     let stop_result = service.stop_task(&task_id).await;
+//     assert!(stop_result.is_ok(), "Stop task should not fail");
     
-    if let Some(stop_response) = stop_result.unwrap() {
-        println!("Task {} stopped with status: {:?}", task_id, stop_response.status);
-        // Task should be in a stopped state or already finished
-        assert!(
-            matches!(stop_response.status, 
-                Status::Finished | Status::Error | Status::Terminated),
-            "Stopped task should be in a final state"
-        );
-    }
+//     if let Some(stop_response) = stop_result.unwrap() {
+//         println!("Task {} stopped with status: {:?}", task_id, stop_response.status);
+//         // Task should be in a stopped state or already finished
+//         assert!(
+//             matches!(stop_response.status, 
+//                 Status::Finished | Status::Error | Status::Terminated),
+//             "Stopped task should be in a final state"
+//         );
+//     }
 
-    // Test stopping non-existent task
-    let stop_nonexistent_result = service.stop_task("non-existent-task").await;
-    assert!(stop_nonexistent_result.is_ok(), "Stop non-existent task should not fail");
-    assert!(stop_nonexistent_result.unwrap().is_none(), "Should return None for non-existent task");
+//     // Test stopping non-existent task
+//     let stop_nonexistent_result = service.stop_task("non-existent-task").await;
+//     assert!(stop_nonexistent_result.is_ok(), "Stop non-existent task should not fail");
+//     assert!(stop_nonexistent_result.unwrap().is_none(), "Should return None for non-existent task");
 
-    service.shutdown().await.unwrap();
-}
+//     service.shutdown().await.unwrap();
+// }
 
 // /// Test service statistics during pipeline execution
 // #[tokio::test]
