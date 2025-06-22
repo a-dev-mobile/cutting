@@ -101,7 +101,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Check if the service is initialized
-    pub(crate) fn is_initialized(&self) -> bool {
+    pub fn is_initialized(&self) -> bool {
         self.is_initialized.load(Ordering::Relaxed)
     }
 
@@ -111,7 +111,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Check if the service is shutdown
-    pub(crate) fn is_shutdown(&self) -> bool {
+    pub fn is_shutdown(&self) -> bool {
         self.is_shutdown.load(Ordering::Relaxed)
     }
 

@@ -79,3 +79,73 @@ async fn test_task_operations() {
     
     service.shutdown().await.unwrap();
 }
+
+#[tokio::test]
+async fn test_init_service() {
+    // Clear any existing tasks from previous tests
+    let running_tasks = get_running_tasks_instance();
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    
+    let mut service = CutListOptimizerServiceImpl::new();
+    
+    // Test that service is not initialized initially
+    assert!(!service.is_initialized());
+    
+    // Test init() method
+    let init_result = service.init(4).await;
+    assert!(init_result.is_ok(), "Service initialization should succeed");
+    
+    // Test that service is now initialized
+    assert!(service.is_initialized(), "Service should be initialized after calling init()");
+    
+    // Test that service is ready to accept tasks
+    let stats_result = service.get_stats().await;
+    assert!(stats_result.is_ok(), "Service should be able to provide stats after initialization");
+    
+    // Test that we can get tasks (should be empty initially)
+    let tasks_result = service.get_tasks(None).await;
+    assert!(tasks_result.is_ok(), "Service should be able to list tasks after initialization");
+    let tasks = tasks_result.unwrap();
+    assert!(tasks.is_empty(), "Task list should be empty initially");
+    
+    // Test invalid thread pool size
+    let mut service2 = CutListOptimizerServiceImpl::new();
+    let invalid_init_result = service2.init(0).await;
+    assert!(invalid_init_result.is_err(), "Initialization with 0 threads should fail");
+    
+    // Clean up
+    service.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn test_service_destroy() {
+    // Clear any existing tasks from previous tests
+    let running_tasks = get_running_tasks_instance();
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Finished);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Error);
+    let _ = running_tasks.cleanup_tasks_with_status(Status::Terminated);
+    
+    let mut service = CutListOptimizerServiceImpl::new();
+    
+    // Initialize service
+    service.init(4).await.unwrap();
+    assert!(service.is_initialized());
+    assert!(!service.is_shutdown());
+    
+    // Test destroy method
+    let destroy_result = service.destroy().await;
+    assert!(destroy_result.is_ok(), "Service destroy should succeed");
+    
+    // Test that service is now shutdown
+    assert!(service.is_shutdown(), "Service should be shutdown after calling destroy()");
+    
+    // Test that operations fail after destroy
+    let stats_result = service.get_stats().await;
+    assert!(stats_result.is_err(), "Operations should fail after service is destroyed");
+}

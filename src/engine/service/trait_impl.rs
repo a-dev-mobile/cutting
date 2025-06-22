@@ -9,7 +9,6 @@ use crate::{
         enums::{Status, StatusCode},
     },
     logging::macros::error,
-    engine::running_tasks::TaskManager,
 };
 
 use super::{
@@ -22,15 +21,37 @@ use super::{
 #[async_trait]
 impl CutListOptimizerService for CutListOptimizerServiceImpl {
     async fn init(&mut self, thread_pool_size: usize) -> Result<()> {
-        // Validate thread pool size
+        use crate::engine::running_tasks::get_running_tasks_instance;
+        use crate::logging::macros::info;
+        
+        // Validate thread pool size (corresponds to Java validation)
         if thread_pool_size == 0 {
             return Err(crate::errors::AppError::invalid_configuration(
                 "Thread pool size must be greater than 0"
             ));
         }
 
-        // Set initialization status
+        // Initialize RunningTasks singleton (corresponds to Java: this.runningTasks = RunningTasks.getInstance())
+        let _running_tasks = get_running_tasks_instance();
+        info!("RunningTasks singleton initialized");
+
+        // TODO: Initialize ThreadPoolExecutor equivalent
+        // In Java: this.taskExecutor = new ThreadPoolExecutor(i, i, 10L, TimeUnit.SECONDS, 
+        //          new ArrayBlockingQueue(THREAD_QUEUE_SIZE), Executors.defaultThreadFactory(), rejectedExecutionHandlerImpl);
+        // For now, we use the semaphore-based approach in core.rs
+        
+        // TODO: Initialize WatchDog
+        // In Java: WatchDog watchDog = new WatchDog();
+        //          this.watchDog = watchDog;
+        //          watchDog.setCutListLogger(this.cutListLogger);
+        //          this.watchDog.setRunningTasks(this.runningTasks);
+        //          this.watchDog.setTaskExecutor(this.taskExecutor);
+        //          this.watchDog.setCutListOptimizerService(this);
+        //          new Thread(this.watchDog, "watchDog").start();
+
+        // Set initialization status (corresponds to Java implicit initialization completion)
         self.set_initialized(true);
+        info!("CutListOptimizerService initialized with thread_pool_size: {}", thread_pool_size);
 
         Ok(())
     }
@@ -255,8 +276,11 @@ impl CutListOptimizerServiceImpl {
     /// This method stops all running tasks and cleans up resources.
     /// It corresponds to the Java `shutdown()` method.
     pub async fn shutdown(&mut self) -> Result<()> {
+        use crate::logging::macros::info;
+        
         // Set shutdown status
         self.set_shutdown(true);
+        info!("Service shutdown initiated");
 
         // TODO: Implement graceful shutdown:
         // 1. Stop accepting new tasks
@@ -265,6 +289,36 @@ impl CutListOptimizerServiceImpl {
         // 4. Clean up resources and connections
         // 5. Save any persistent state
 
+        Ok(())
+    }
+
+    /// Destroy the service and clean up all resources
+    /// 
+    /// This method corresponds to the Java `destroy()` method which calls
+    /// `this.taskExecutor.shutdown()` to stop the thread pool executor.
+    pub async fn destroy(&mut self) -> Result<()> {
+        use crate::logging::macros::info;
+        use crate::engine::running_tasks::{get_running_tasks_instance, TaskCleanup};
+        use crate::models::enums::Status;
+        
+        info!("Service destroy initiated");
+        
+        // Stop all active tasks (corresponds to Java taskExecutor.shutdown())
+        let running_tasks = get_running_tasks_instance();
+        
+        // Stop all running tasks
+        let _ = running_tasks.cleanup_tasks_with_status(Status::Running);
+        let _ = running_tasks.cleanup_tasks_with_status(Status::Queued);
+        
+        // Set shutdown status
+        self.set_shutdown(true);
+        
+        // TODO: Additional cleanup:
+        // 1. Stop WatchDog thread
+        // 2. Clean up thread pool executor
+        // 3. Release any held resources
+        
+        info!("Service destroyed successfully");
         Ok(())
     }
 }
