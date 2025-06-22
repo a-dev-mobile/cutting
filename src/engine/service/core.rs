@@ -23,8 +23,6 @@ use crate::{
 /// optimization execution, and service lifecycle operations.
 #[derive(Debug)]
 pub struct CutListOptimizerServiceImpl {
-    /// Whether multiple tasks per client are allowed
-    allow_multiple_tasks_per_client: AtomicBool,
     /// Task ID counter for generating unique task IDs
     pub(crate) task_id_counter: AtomicU64,
     /// Service initialization status
@@ -37,7 +35,7 @@ pub struct CutListOptimizerServiceImpl {
     max_threads_per_task: usize,
     /// Service start time
     start_time: DateTime<Utc>,
-    /// Running tasks manager
+    /// Running tasks manager (singleton pattern)
     running_tasks: Option<Arc<RunningTasks>>,
     /// Watch dog for monitoring
     watch_dog: Option<Arc<WatchDog>>,
@@ -49,7 +47,6 @@ impl CutListOptimizerServiceImpl {
     /// Create a new service instance
     pub fn new() -> Self {
         Self {
-            allow_multiple_tasks_per_client: AtomicBool::new(false),
             task_id_counter: AtomicU64::new(0),
             is_initialized: AtomicBool::new(false),
             is_shutdown: AtomicBool::new(false),
@@ -90,15 +87,6 @@ impl CutListOptimizerServiceImpl {
         Ok(())
     }
 
-    /// Get the current allow multiple tasks per client setting
-    pub(crate) fn get_allow_multiple_tasks_per_client(&self) -> bool {
-        self.allow_multiple_tasks_per_client.load(Ordering::Relaxed)
-    }
-
-    /// Set the allow multiple tasks per client setting
-    pub(crate) fn set_allow_multiple_tasks_per_client_internal(&self, allow: bool) {
-        self.allow_multiple_tasks_per_client.store(allow, Ordering::Relaxed);
-    }
 
     /// Check if the service is initialized
     pub fn is_initialized(&self) -> bool {

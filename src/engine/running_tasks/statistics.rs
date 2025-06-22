@@ -83,6 +83,7 @@ impl StatisticsCollector for RunningTasks {
             Status::Queued => self.nbr_idle_tasks.load(Ordering::Relaxed),
             Status::Running => self.nbr_running_tasks.load(Ordering::Relaxed),
             Status::Finished => self.nbr_finished_tasks.load(Ordering::Relaxed),
+            Status::Stopped => self.nbr_stopped_tasks.load(Ordering::Relaxed),
             Status::Terminated => self.nbr_terminated_tasks.load(Ordering::Relaxed),
             Status::Error => self.nbr_error_tasks.load(Ordering::Relaxed),
         }

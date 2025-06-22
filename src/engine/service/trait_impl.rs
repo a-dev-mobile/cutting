@@ -271,19 +271,13 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         Ok(stats)
     }
     
-    fn set_allow_multiple_tasks_per_client(&mut self, allow: bool) {
-        self.set_allow_multiple_tasks_per_client_internal(allow);
+    fn set_allow_multiple_tasks_per_client(&mut self, _allow: bool) {
+        // Client-related functionality removed as per production-ready fixes
+        // This method is now a no-op
     }
 }
 
 impl CutListOptimizerServiceImpl {
-    /// Check client task limit
-    async fn check_client_task_limit(&self, client_id: &str) -> Result<Option<StatusCode>> {
-        // TODO: Implement with running tasks manager
-        // For now, allow all tasks
-        let _ = client_id;
-        Ok(None)
-    }
 
     /// Shutdown the service gracefully
     /// 

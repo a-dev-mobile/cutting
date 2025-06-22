@@ -6,6 +6,7 @@ pub enum Status {
     Queued,
     Running,
     Finished,
+    Stopped,
     Terminated,
     Error,
 }

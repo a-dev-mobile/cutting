@@ -156,7 +156,7 @@ async fn test_full_pipeline() {
             
             // Check if task has finished (either successfully or with error)
             match status_response.status {
-                Status::Finished | Status::Error | Status::Terminated => {
+                Status::Finished | Status::Error | Status::Terminated | Status::Stopped => {
                     final_status = Some(status_response);
                     break;
                 }

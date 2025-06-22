@@ -105,6 +105,7 @@ impl RunningTasks {
             Status::Queued => self.nbr_idle_tasks.fetch_add(1, Ordering::Relaxed),
             Status::Running => self.nbr_running_tasks.fetch_add(1, Ordering::Relaxed),
             Status::Finished => self.nbr_finished_tasks.fetch_add(1, Ordering::Relaxed),
+            Status::Stopped => self.nbr_stopped_tasks.fetch_add(1, Ordering::Relaxed),
             Status::Terminated => self.nbr_terminated_tasks.fetch_add(1, Ordering::Relaxed),
             Status::Error => self.nbr_error_tasks.fetch_add(1, Ordering::Relaxed),
         };
@@ -118,6 +119,7 @@ impl RunningTasks {
             Status::Queued => self.nbr_idle_tasks.fetch_sub(1, Ordering::Relaxed),
             Status::Running => self.nbr_running_tasks.fetch_sub(1, Ordering::Relaxed),
             Status::Finished => self.nbr_finished_tasks.fetch_sub(1, Ordering::Relaxed),
+            Status::Stopped => self.nbr_stopped_tasks.fetch_sub(1, Ordering::Relaxed),
             Status::Terminated => self.nbr_terminated_tasks.fetch_sub(1, Ordering::Relaxed),
             Status::Error => self.nbr_error_tasks.fetch_sub(1, Ordering::Relaxed),
         };
