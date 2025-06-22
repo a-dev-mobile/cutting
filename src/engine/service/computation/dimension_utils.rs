@@ -273,7 +273,7 @@ impl DimensionUtils {
     }
 
     /// Convert integer orientation to Orientation enum
-    fn convert_orientation(orientation: i32) -> Orientation {
+    pub fn convert_orientation(orientation: i32) -> Orientation {
         match orientation {
             0 => Orientation::Any,
             1 => Orientation::Horizontal,
