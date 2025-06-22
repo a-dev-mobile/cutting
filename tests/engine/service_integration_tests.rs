@@ -11,6 +11,7 @@ use cutlist_optimizer_cli::models::{
     CalculationRequest, Panel, Configuration,
     enums::{Status, StatusCode},
 };
+use serial_test::serial;
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -108,6 +109,7 @@ fn create_invalid_request() -> CalculationRequest {
 /// 4. Status monitoring
 /// 5. Result retrieval
 #[tokio::test]
+#[serial]
 async fn test_full_pipeline() {
     // Clear any existing tasks from previous tests
     let running_tasks = get_running_tasks_instance();
@@ -240,6 +242,7 @@ async fn test_pipeline_with_invalid_request() {
 
 /// Test multiple tasks pipeline
 #[tokio::test]
+#[serial]
 async fn test_multiple_tasks_pipeline() {
     // Clear any existing tasks
     let running_tasks = get_running_tasks_instance();
@@ -349,6 +352,7 @@ async fn test_task_stop_pipeline() {
 
 /// Test service statistics during pipeline execution
 #[tokio::test]
+#[serial]
 async fn test_stats_during_pipeline() {
     // Clear any existing tasks
     let running_tasks = get_running_tasks_instance();

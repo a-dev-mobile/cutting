@@ -5,6 +5,7 @@ use cutlist_optimizer_cli::{
     models::{CalculationRequest},
     models::enums::StatusCode,
 };
+use serial_test::serial;
 
 // #[tokio::test]
 // async fn test_service_lifecycle() {
@@ -162,6 +163,7 @@ async fn test_submit_invalid_panels() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_task_status_existing() {
     use cutlist_optimizer_cli::{
         models::{Panel, Configuration, Task},
@@ -315,6 +317,7 @@ async fn test_terminate_task_invalid_status() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_service_stats() {
     use cutlist_optimizer_cli::{
         models::{Task},
@@ -331,25 +334,28 @@ async fn test_get_service_stats() {
 
     // Create several tasks with different statuses
     
-    // Create tasks with different statuses
-    let mut task1 = Task::new("task_queued_1".to_string());
-    // task1 is Queued by default
-    
-    let mut task2 = Task::new("task_running_1".to_string());
-    task2.set_running_status().unwrap();
-    
-    let mut task3 = Task::new("task_finished_1".to_string());
-    task3.set_running_status().unwrap();
-    task3.stop().unwrap(); // Set to finished by stopping
-    
-    let mut task4 = Task::new("task_error_1".to_string());
-    task4.terminate_error(); // Set to error status
-    
-    // Add tasks to running tasks
+    // Create task1 as Queued (default)
+    let task1 = Task::new("task_queued_1".to_string());
     running_tasks.add_task(task1).unwrap();
+    
+    // Create task2 and set to Running after adding
+    let task2 = Task::new("task_running_1".to_string());
     running_tasks.add_task(task2).unwrap();
+    let task2_arc = running_tasks.get_task("task_running_1").unwrap();
+    task2_arc.read().set_running_status().unwrap();
+    
+    // Create task3, set to Running, then Finished after adding
+    let task3 = Task::new("task_finished_1".to_string());
     running_tasks.add_task(task3).unwrap();
+    let task3_arc = running_tasks.get_task("task_finished_1").unwrap();
+    task3_arc.read().set_running_status().unwrap();
+    task3_arc.read().stop().unwrap();
+    
+    // Create task4 and set to Error after adding
+    let task4 = Task::new("task_error_1".to_string());
     running_tasks.add_task(task4).unwrap();
+    let task4_arc = running_tasks.get_task("task_error_1").unwrap();
+    task4_arc.read().terminate_error();
 
     // Get statistics
     let stats = service.get_stats().await.unwrap();
@@ -370,6 +376,7 @@ async fn test_get_service_stats() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_get_tasks_by_status() {
     use cutlist_optimizer_cli::{
         models::{Task},
