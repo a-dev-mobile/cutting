@@ -3,8 +3,9 @@
 //! This module contains the logic for fitting tiles into mosaics and handling placement strategies.
 
 use crate::{
-    models::TileNode,
+    models::{TileNode, TileDimensions, Mosaic, enums::cut_direction::CutDirection},
     errors::Result,
+    Orientation,
 };
 
 use super::structs::CutListThread;
@@ -13,14 +14,14 @@ impl CutListThread {
     /// Add a tile to a mosaic, generating all possible fitting results
     pub(crate) fn add_tile_to_mosaic(
         &self,
-        tile_dimensions: &crate::models::TileDimensions,
-        mosaic: &crate::models::Mosaic,
-        results: &mut Vec<crate::models::Mosaic>,
+        tile_dimensions: &TileDimensions,
+        mosaic: &Mosaic,
+        results: &mut Vec<Mosaic>,
     ) -> Result<()> {
         // Check grain direction compatibility
         if !self.consider_grain_direction 
-            || mosaic.orientation() == crate::Orientation::Any 
-            || tile_dimensions.orientation == crate::Orientation::Any {
+            || mosaic.orientation() == Orientation::Any 
+            || tile_dimensions.orientation == Orientation::Any {
             self.fit_tile(tile_dimensions, mosaic, results, self.cut_thickness)?;
             
             if !tile_dimensions.is_square() {
@@ -45,9 +46,9 @@ impl CutListThread {
     /// Fit a tile into a mosaic using various cutting strategies
     pub(crate) fn fit_tile(
         &self,
-        tile_dimensions: &crate::models::TileDimensions,
-        mosaic: &crate::models::Mosaic,
-        results: &mut Vec<crate::models::Mosaic>,
+        tile_dimensions: &TileDimensions,
+        mosaic: &Mosaic,
+        results: &mut Vec<Mosaic>,
         cut_thickness: i32,
     ) -> Result<()> {
         let mut candidates = Vec::new();
@@ -88,14 +89,12 @@ impl CutListThread {
     /// Fit a tile using cutting strategies
     pub(crate) fn fit_tile_with_cuts(
         &self,
-        tile_dimensions: &crate::models::TileDimensions,
-        mosaic: &crate::models::Mosaic,
+        tile_dimensions: &TileDimensions,
+        mosaic: &Mosaic,
         candidate: &TileNode,
-        results: &mut Vec<crate::models::Mosaic>,
+        results: &mut Vec<Mosaic>,
         cut_thickness: i32,
     ) -> Result<()> {
-        use crate::models::enums::cut_direction::CutDirection;
-        
         match self.first_cut_orientation {
             CutDirection::Both => {
                 self.try_horizontal_first_cut(tile_dimensions, mosaic, candidate, results, cut_thickness)?;
@@ -114,10 +113,10 @@ impl CutListThread {
     /// Try horizontal-first cutting strategy
     pub(crate) fn try_horizontal_first_cut(
         &self,
-        tile_dimensions: &crate::models::TileDimensions,
-        mosaic: &crate::models::Mosaic,
+        tile_dimensions: &TileDimensions,
+        mosaic: &Mosaic,
         candidate: &TileNode,
-        results: &mut Vec<crate::models::Mosaic>,
+        results: &mut Vec<Mosaic>,
         cut_thickness: i32,
     ) -> Result<()> {
         let mut new_mosaic = mosaic.clone();
@@ -134,10 +133,10 @@ impl CutListThread {
     /// Try vertical-first cutting strategy
     pub(crate) fn try_vertical_first_cut(
         &self,
-        tile_dimensions: &crate::models::TileDimensions,
-        mosaic: &crate::models::Mosaic,
+        tile_dimensions: &TileDimensions,
+        mosaic: &Mosaic,
         candidate: &TileNode,
-        results: &mut Vec<crate::models::Mosaic>,
+        results: &mut Vec<Mosaic>,
         cut_thickness: i32,
     ) -> Result<()> {
         let mut new_mosaic = mosaic.clone();

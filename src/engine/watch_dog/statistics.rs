@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 use crate::logging::debug;
-
-use super::super::running_tasks::{RunningTasks, StatisticsCollector, TaskManager};
+use crate::engine::running_tasks::{RunningTasks, StatisticsCollector, TaskManager};
 use crate::models::stats::Stats;
+use crate::models::enums::Status;
 
 /// WatchDog statistics component
 pub struct WatchDogStatistics {
@@ -100,7 +100,7 @@ impl WatchDogStatistics {
             let status = *task.status.read().unwrap();
             
             // Only check running tasks
-            if matches!(status, crate::models::enums::Status::Running) {
+            if matches!(status, Status::Running) {
                 if let Ok(elapsed) = now.duration_since(task.start_time) {
                     if elapsed > max_duration {
                         attention_tasks.push(task.id.clone());

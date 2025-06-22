@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 use crate::models::{task::Task, TileDimensions};
-use super::super::StockSolutionGenerator;
+use crate::engine::stock::StockSolutionGenerator;
 use crate::errors::{AppError, Result};
 use super::{StockPanelPicker, StockPanelPickerBuilder};
 

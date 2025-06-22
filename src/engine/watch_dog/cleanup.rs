@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 use crate::logging::{error, info};
-
-use super::super::running_tasks::{RunningTasks, TaskManager};
+use crate::engine::running_tasks::{RunningTasks, TaskManager};
+use crate::models::enums::Status;
 
 /// Task cleanup component
 pub struct TaskCleanup {
@@ -83,9 +83,9 @@ impl TaskCleanup {
             let status = *task.status.read().unwrap();
             
             match status {
-                crate::models::enums::Status::Finished 
-                | crate::models::enums::Status::Error 
-                | crate::models::enums::Status::Terminated => {
+                Status::Finished 
+                | Status::Error 
+                | Status::Terminated => {
                     completed_task_ids.push(task.id.clone());
                 }
                 _ => {}

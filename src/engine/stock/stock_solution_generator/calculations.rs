@@ -1,6 +1,6 @@
 use super::structs::{StockSolutionGenerator, StockSolutionConfig};
 use crate::models::TileDimensions;
-use super::super::StockSolution;
+use crate::engine::stock::StockSolution;
 
 impl StockSolutionGenerator {
     /// Get the total required area

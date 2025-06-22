@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 use crate::errors::{AppError, Result};
-use super::super::StockSolution;
+use crate::engine::stock::StockSolution;
 use crate::constants::StockConstants;
 use super::StockPanelPicker;
 

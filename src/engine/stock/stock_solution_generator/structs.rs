@@ -1,5 +1,5 @@
 use crate::models::TileDimensions;
-use super::super::StockSolution;
+use crate::engine::stock::StockSolution;
 use crate::constants::PerformanceConstants;
 use std::collections::HashSet;
 

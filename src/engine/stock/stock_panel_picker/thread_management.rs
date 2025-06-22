@@ -7,7 +7,7 @@ use tokio::time::sleep;
 use crate::{log_debug, log_error};
 
 use crate::models::task::Task;
-use super::super::StockSolution;
+use crate::engine::stock::StockSolution;
 use crate::constants::StockConstants;
 use crate::errors::{AppError, Result};
 use super::StockPanelPicker;
@@ -58,7 +58,7 @@ impl StockPanelPicker {
 
     /// Main generation loop that runs in the background
     async fn generation_loop(
-        stock_solution_generator: Arc<Mutex<super::super::StockSolutionGenerator>>,
+        stock_solution_generator: Arc<Mutex<crate::engine::stock::StockSolutionGenerator>>,
         stock_solutions: Arc<Mutex<Vec<StockSolution>>>,
         max_retrieved_idx: Arc<Mutex<usize>>,
         task: Arc<Task>,

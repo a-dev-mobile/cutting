@@ -127,7 +127,7 @@ pub mod stats_collector {
 
 /// Health monitoring utilities
 pub mod health_monitor {
-    use super::super::traits::HealthStatus;
+    use super::HealthStatus;
 
     /// Health monitoring helper functions
     pub struct HealthMonitor;

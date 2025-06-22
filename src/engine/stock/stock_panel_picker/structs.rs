@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use tokio::task::JoinHandle;
 use tokio::sync::mpsc;
 use crate::models::{task::Task, TileDimensions};
-use super::super::{StockSolution, StockSolutionGenerator};
+use crate::engine::stock::{StockSolution, StockSolutionGenerator};
 use crate::errors::Result;
 
 

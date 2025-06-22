@@ -9,7 +9,7 @@ use super::config::WatchDogConfig;
 use super::monitoring::TaskMonitor;
 use super::cleanup::TaskCleanup;
 use super::statistics::WatchDogStatistics;
-use super::super::running_tasks::RunningTasks;
+use crate::engine::running_tasks::RunningTasks;
 
 /// WatchDog monitors running tasks and handles cleanup of stale tasks
 pub struct WatchDog {

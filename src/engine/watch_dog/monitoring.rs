@@ -3,9 +3,8 @@
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use crate::logging::{debug, warn};
-
 use crate::models::enums::Status;
-use super::super::running_tasks::{RunningTasks, TaskManager};
+use crate::engine::running_tasks::{RunningTasks, TaskManager};
 use super::config::WatchDogConfig;
 
 /// Task monitoring component

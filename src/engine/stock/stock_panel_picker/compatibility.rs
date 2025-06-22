@@ -2,8 +2,9 @@
 
 use std::time::Duration;
 use crate::errors::{AppError, Result};
-use super::super::StockSolution;
+use crate::engine::stock::StockSolution;
 use crate::constants::StockConstants;
+use crate::models::{TileDimensions, task::Task};
 use super::StockPanelPicker;
 
 impl StockPanelPicker {
@@ -188,17 +189,17 @@ impl JavaStyleStockPanelPickerBuilder {
         }
     }
 
-    pub fn tiles_to_fit(mut self, tiles: Vec<crate::models::TileDimensions>) -> Self {
+    pub fn tiles_to_fit(mut self, tiles: Vec<TileDimensions>) -> Self {
         self.inner = self.inner.tiles_to_fit(tiles);
         self
     }
 
-    pub fn stock_tiles(mut self, tiles: Vec<crate::models::TileDimensions>) -> Self {
+    pub fn stock_tiles(mut self, tiles: Vec<TileDimensions>) -> Self {
         self.inner = self.inner.stock_tiles(tiles);
         self
     }
 
-    pub fn task(mut self, task: std::sync::Arc<crate::models::task::Task>) -> Self {
+    pub fn task(mut self, task: std::sync::Arc<Task>) -> Self {
         self.inner = self.inner.task(task);
         self
     }

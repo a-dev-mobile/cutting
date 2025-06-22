@@ -3,7 +3,7 @@
 //! This module contains the various cutting algorithms and strategies for splitting tiles.
 
 use crate::{
-    models::TileNode,
+    models::{TileNode, TileDimensions, Cut},
     errors::Result,
 };
 
@@ -14,9 +14,9 @@ impl CutListThread {
     pub fn split_hv(
         &self,
         node: &TileNode,
-        tile_dimensions: &crate::models::TileDimensions,
+        tile_dimensions: &TileDimensions,
         cut_thickness: i32,
-    ) -> Result<Vec<crate::models::Cut>> {
+    ) -> Result<Vec<Cut>> {
         let mut cuts = Vec::new();
         let mut working_node = node.clone();
         
@@ -68,9 +68,9 @@ impl CutListThread {
     pub fn split_vh(
         &self,
         node: &TileNode,
-        tile_dimensions: &crate::models::TileDimensions,
+        tile_dimensions: &TileDimensions,
         cut_thickness: i32,
-    ) -> Result<Vec<crate::models::Cut>> {
+    ) -> Result<Vec<Cut>> {
         let mut cuts = Vec::new();
         let mut working_node = node.clone();
         
@@ -125,8 +125,7 @@ impl CutListThread {
         width: i32,
         _cut_thickness: i32,
         tile_id: i32,
-    ) -> Result<crate::models::Cut> {
-        use crate::models::Cut;
+    ) -> Result<Cut> {
         
         Ok(Cut {
             x1: node.x1() + width,
@@ -150,8 +149,7 @@ impl CutListThread {
         height: i32,
         _cut_thickness: i32,
         tile_id: i32,
-    ) -> Result<crate::models::Cut> {
-        use crate::models::Cut;
+    ) -> Result<Cut> {
         
         Ok(Cut {
             x1: node.x1(),
@@ -174,8 +172,7 @@ impl CutListThread {
         node: &mut TileNode,
         width: i32,
         cut_thickness: i32,
-    ) -> Result<crate::models::Cut> {
-        use crate::models::Cut;
+    ) -> Result<Cut> {
         
         let original_width = node.width();
         let original_height = node.height();
@@ -228,8 +225,7 @@ impl CutListThread {
         node: &mut TileNode,
         height: i32,
         cut_thickness: i32,
-    ) -> Result<crate::models::Cut> {
-        use crate::models::Cut;
+    ) -> Result<Cut> {
         
         let original_width = node.width();
         let original_height = node.height();

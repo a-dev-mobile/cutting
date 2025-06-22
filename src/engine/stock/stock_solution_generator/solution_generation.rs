@@ -1,6 +1,6 @@
 use super::structs::{StockSolutionGenerator, StockSolutionConfig};
 use crate::models::enums::StockSolutionResult;
-use super::super::StockSolution;
+use crate::engine::stock::StockSolution;
 use crate::{log_info, log_operation_start, log_operation_success};
 
 impl StockSolutionGenerator {
