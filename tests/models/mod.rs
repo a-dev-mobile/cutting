@@ -16,3 +16,4 @@ pub mod task_status_response_tests;
 pub mod tile_dimensions_tests;
 pub mod tile_node_tests;
 pub mod tile_tests;
+pub mod stats_tests;
