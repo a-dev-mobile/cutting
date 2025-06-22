@@ -102,13 +102,17 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
             debug!("Spawning computation for material: {}", material);
             
             let handle = tokio::spawn(async move {
-                material_compute::compute_material(
-                    material_tiles_clone,
-                    material_stock_clone,
-                    configuration_clone.as_ref(),
-                    &task_clone,
-                    &material_clone,
-                ).await
+                if let Some(config) = configuration_clone.as_ref() {
+                    material_compute::compute_material(
+                        material_tiles_clone,
+                        material_stock_clone,
+                        config,
+                        &task_clone,
+                        &material_clone,
+                    ).await
+                } else {
+                    Err(AppError::invalid_input("Configuration is required for material computation"))
+                }
             });
             
             computation_handles.push(handle);
@@ -176,13 +180,15 @@ pub async fn compute_task_simple(request: CalculationRequest, task_id: String) -
             let material_clone = material.clone();
             
             tokio::spawn(async move {
-                material_compute::compute_material(
-                    material_tiles,
-                    material_stock_clone,
-                    configuration_clone.as_ref(),
-                    &Task::new(task_id_clone), // Simplified for testing
-                    &material_clone,
-                ).await
+                if let Some(config) = configuration_clone.as_ref() {
+                    let _ = material_compute::compute_material(
+                        material_tiles,
+                        material_stock_clone,
+                        config,
+                        &Task::new(task_id_clone), // Simplified for testing
+                        &material_clone,
+                    ).await;
+                }
             });
         }
     }
