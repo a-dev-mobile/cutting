@@ -7,10 +7,10 @@ use crate::{
         Solution, TileDimensions,
         task::Task,
     },
-    stock::StockSolution,
     constants::ConfigurationDefaults,
     CutDirection, Status,
 };
+use crate::engine::stock::StockSolution;
 use std::{
     sync::{Arc, Mutex},
     time::Instant,

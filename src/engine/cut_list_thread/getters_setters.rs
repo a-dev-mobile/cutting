@@ -7,9 +7,9 @@ use crate::{
         Solution, TileDimensions,
         task::Task,
     },
-    stock::StockSolution,
     CutDirection, Status,
 };
+use crate::engine::stock::StockSolution;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,

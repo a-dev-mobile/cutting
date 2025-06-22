@@ -18,7 +18,6 @@ pub mod comparator;
 pub mod constants;
 pub mod engine;
 pub mod logging;
-pub mod stock;
 
 pub mod errors;
 pub mod models;
@@ -32,6 +31,9 @@ pub use models::{
     TileDimensions,
 };
 pub use constants::MaterialConstants;
+
+// Re-export stock module from engine for backward compatibility
+pub use engine::stock;
 
 // Основные типы для работы с библиотекой
 pub mod prelude {

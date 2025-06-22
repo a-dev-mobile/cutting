@@ -1,6 +1,6 @@
 use super::structs::StockSolutionGenerator;
 use crate::models::TileDimensions;
-use crate::stock::StockSolution;
+use super::super::StockSolution;
 use std::collections::HashSet;
 
 impl StockSolutionGenerator {

@@ -1,6 +1,6 @@
 use super::structs::{Solution, ID_COUNTER};
 use crate::models::{Mosaic, TileDimensions, TileNode, Tile};
-use crate::stock::StockSolution;
+use crate::engine::stock::StockSolution;
 use std::sync::atomic::Ordering;
 use std::time::{SystemTime, UNIX_EPOCH};
 
