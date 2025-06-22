@@ -9,6 +9,7 @@ use crate::{
         enums::{Status, StatusCode},
     },
     logging::macros::error,
+    engine::running_tasks::TaskManager,
 };
 
 use super::{
@@ -70,34 +71,104 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
-        // TODO: Implement actual task status retrieval
-        // This should include:
-        // 1. Look up task in running tasks registry
-        // 2. Get current status, progress, and metrics
-        // 3. Return formatted status response
-
-        let _ = task_id; // Suppress unused parameter warning
-        Ok(None)
+        // Get the running tasks instance
+        let running_tasks = crate::engine::running_tasks::get_running_tasks_instance();
+        
+        // Look up task in running tasks registry
+        if let Some(task_arc) = running_tasks.get_task(task_id) {
+            let task = task_arc.read();
+            
+            // Build solution if not already built
+            task.build_and_set_solution();
+            
+            // Update last queried time
+            *task.last_queried.lock().unwrap() = std::time::SystemTime::now();
+            
+            // Get current status and progress
+            let status = task.status();
+            let percentage_done = task.percentage_done() as u8;
+            let init_percentage = task.max_thread_progress_percentage() as u8;
+            let solution = task.solution.read().unwrap().clone();
+            
+            Ok(Some(TaskStatusResponse {
+                status,
+                percentage_done,
+                init_percentage,
+                solution,
+            }))
+        } else {
+            // Task not found
+            Ok(None)
+        }
     }
     
     async fn stop_task(&self, task_id: &str) -> Result<Option<TaskStatusResponse>> {
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
-        // TODO: Implement with running tasks manager
-        // For now, return None (task not found)
-        let _ = task_id;
-        Ok(None)
+        // Get the running tasks instance
+        let running_tasks = crate::engine::running_tasks::get_running_tasks_instance();
+        
+        // Look up task in running tasks registry
+        if let Some(task_arc) = running_tasks.get_task(task_id) {
+            let task = task_arc.read();
+            
+            // Attempt to stop the task
+            if let Err(e) = task.stop() {
+                crate::logging::macros::warn!(
+                    "Unable to stop task {}. Current status is: {:?}. Error: {}", 
+                    task_id, task.status(), e
+                );
+            }
+            
+            // Return final status
+            let status = task.status();
+            let percentage_done = task.percentage_done() as u8;
+            let init_percentage = task.max_thread_progress_percentage() as u8;
+            let solution = task.solution.read().unwrap().clone();
+            
+            Ok(Some(TaskStatusResponse {
+                status,
+                percentage_done,
+                init_percentage,
+                solution,
+            }))
+        } else {
+            // Task not found
+            Ok(None)
+        }
     }
     
     async fn terminate_task(&self, task_id: &str) -> Result<i32> {
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
-        // TODO: Implement with running tasks manager
-        // For now, return -1 (task not found)
-        let _ = task_id;
-        Ok(-1)
+        // Get the running tasks instance
+        let running_tasks = crate::engine::running_tasks::get_running_tasks_instance();
+        
+        // Look up task in running tasks registry
+        if let Some(task_arc) = running_tasks.get_task(task_id) {
+            let task = task_arc.read();
+            
+            // Attempt to terminate the task
+            match task.terminate() {
+                Ok(()) => {
+                    // Success - return 0 (Java convention for success)
+                    Ok(0)
+                }
+                Err(e) => {
+                    crate::logging::macros::warn!(
+                        "Unable to terminate task {}. Current status is: {:?}. Error: {}", 
+                        task_id, task.status(), e
+                    );
+                    // Return 1 for failure (Java convention)
+                    Ok(1)
+                }
+            }
+        } else {
+            // Task not found - return -1 (Java convention)
+            Ok(-1)
+        }
     }
     
     async fn get_tasks(&self, client_id: &str, status: Status) -> Result<Vec<String>> {
