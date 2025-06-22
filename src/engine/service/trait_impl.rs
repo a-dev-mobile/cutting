@@ -68,23 +68,32 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
     }
     
     async fn get_task_status(&self, task_id: &str) -> Result<Option<TaskStatusResponse>> {
+        use crate::logging::macros::debug;
+        use crate::engine::running_tasks::{get_running_tasks_instance, TaskManager};
+        
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
+        debug!("Getting task status for task_id: {}", task_id);
+
         // Get the running tasks instance
-        let running_tasks = crate::engine::running_tasks::get_running_tasks_instance();
+        let running_tasks = get_running_tasks_instance();
         
         // Look up task in running tasks registry
         if let Some(task_arc) = running_tasks.get_task(task_id) {
+            debug!("Task found, building solution for task_id: {}", task_id);
+            
             let task = task_arc.read();
             
-            // Build solution if not already built
-            task.build_and_set_solution();
+            // Build solution if task is still running (matches Java logic)
+            if task.is_running() {
+                task.build_and_set_solution();
+            }
             
-            // Update last queried time
+            // Update last queried time (matches Java setLastQueried)
             *task.last_queried.lock().unwrap() = std::time::SystemTime::now();
             
-            // Get current status and progress
+            // Get current status and progress (matches Java TaskStatusResponse creation)
             let status = task.status();
             let percentage_done = task.percentage_done() as u8;
             let init_percentage = task.max_thread_progress_percentage() as u8;
@@ -97,31 +106,35 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
                 solution,
             }))
         } else {
-            // Task not found
+            // Task not found - return None (matches Java returning null)
+            debug!("Task {} not found", task_id);
             Ok(None)
         }
     }
     
     async fn stop_task(&self, task_id: &str) -> Result<Option<TaskStatusResponse>> {
+        use crate::logging::macros::warn;
+        use crate::engine::running_tasks::{get_running_tasks_instance, TaskManager};
+        
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
         // Get the running tasks instance
-        let running_tasks = crate::engine::running_tasks::get_running_tasks_instance();
+        let running_tasks = get_running_tasks_instance();
         
         // Look up task in running tasks registry
         if let Some(task_arc) = running_tasks.get_task(task_id) {
             let task = task_arc.read();
             
-            // Attempt to stop the task
+            // Attempt to stop the task (matches Java task.stop() != 0 check)
             if let Err(e) = task.stop() {
-                crate::logging::macros::warn!(
+                warn!(
                     "Unable to stop task {}. Current status is: {:?}. Error: {}", 
                     task_id, task.status(), e
                 );
             }
             
-            // Return final status
+            // Return final status (matches Java TaskStatusResponse creation)
             let status = task.status();
             let percentage_done = task.percentage_done() as u8;
             let init_percentage = task.max_thread_progress_percentage() as u8;
@@ -134,39 +147,42 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
                 solution,
             }))
         } else {
-            // Task not found
+            // Task not found - return None (matches Java returning null)
             Ok(None)
         }
     }
     
     async fn terminate_task(&self, task_id: &str) -> Result<i32> {
+        use crate::logging::macros::warn;
+        use crate::engine::running_tasks::{get_running_tasks_instance, TaskManager};
+        
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
         // Get the running tasks instance
-        let running_tasks = crate::engine::running_tasks::get_running_tasks_instance();
+        let running_tasks = get_running_tasks_instance();
         
         // Look up task in running tasks registry
         if let Some(task_arc) = running_tasks.get_task(task_id) {
             let task = task_arc.read();
             
-            // Attempt to terminate the task
+            // Attempt to terminate the task (matches Java task.terminate() logic)
             match task.terminate() {
                 Ok(()) => {
                     // Success - return 0 (Java convention for success)
                     Ok(0)
                 }
                 Err(e) => {
-                    crate::logging::macros::warn!(
+                    warn!(
                         "Unable to terminate task {}. Current status is: {:?}. Error: {}", 
                         task_id, task.status(), e
                     );
-                    // Return 1 for failure (Java convention)
+                    // Return 1 for failure (Java convention - matches Java returning iTerminate != 0)
                     Ok(1)
                 }
             }
         } else {
-            // Task not found - return -1 (Java convention)
+            // Task not found - return -1 (Java convention - matches Java returning -1)
             Ok(-1)
         }
     }
