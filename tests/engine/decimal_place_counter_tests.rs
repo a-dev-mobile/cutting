@@ -1,9 +1,9 @@
-//! Tests for DecimalPlaceCounter struct
+//! Tests for DimensionUtils struct
 //!
-//! These tests verify the DecimalPlaceCounter utility functions for counting
+//! These tests verify the DimensionUtils utility functions for counting
 //! decimal and integer places, including validation and error handling.
 
-use cutlist_optimizer_cli::engine::service::decimal_places::DecimalPlaceCounter;
+use cutlist_optimizer_cli::engine::service::computation::dimension_utils::DimensionUtils;
 use cutlist_optimizer_cli::models::panel::structs::Panel;
 
 #[cfg(test)]
@@ -26,25 +26,25 @@ mod decimal_place_counter_tests {
 
     #[test]
     fn test_decimal_places_edge_cases() {
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places(""), 0);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("."), 0);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("123."), 0);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places(".5"), 1);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places(""), 0);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("."), 0);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("123."), 0);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places(".5"), 1);
     }
 
     #[test]
     fn test_integer_places_edge_cases() {
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places(""), 0);
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places(".5"), 0);
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places("123."), 3);
+        assert_eq!(DimensionUtils::get_nbr_integer_places(""), 0);
+        assert_eq!(DimensionUtils::get_nbr_integer_places(".5"), 0);
+        assert_eq!(DimensionUtils::get_nbr_integer_places("123."), 3);
     }
 
     #[test]
     fn test_validate_and_count_places() {
-        assert!(DecimalPlaceCounter::validate_and_count_places("").is_err());
-        assert!(DecimalPlaceCounter::validate_and_count_places("abc").is_err());
+        assert!(DimensionUtils::validate_and_count_places("").is_err());
+        assert!(DimensionUtils::validate_and_count_places("abc").is_err());
         
-        let result = DecimalPlaceCounter::validate_and_count_places("123.45").unwrap();
+        let result = DimensionUtils::validate_and_count_places("123.45").unwrap();
         assert_eq!(result, (3, 2));
     }
 
@@ -55,8 +55,8 @@ mod decimal_place_counter_tests {
             create_panel("1.0", "2.123", true),
         ];
 
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 6).is_ok());
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 4).is_err());
+        assert!(DimensionUtils::validate_digit_limits(&panels, 6).is_ok());
+        assert!(DimensionUtils::validate_digit_limits(&panels, 4).is_err());
     }
 
     #[test]
@@ -67,26 +67,26 @@ mod decimal_place_counter_tests {
         
         let panels = vec![panel];
         
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_decimal_places(&panels), 0);
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_integer_places(&panels), 1);
+        assert_eq!(DimensionUtils::get_max_nbr_decimal_places(&panels), 0);
+        assert_eq!(DimensionUtils::get_max_nbr_integer_places(&panels), 1);
     }
 
     #[test]
     fn test_decimal_places_basic() {
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("123.45"), 2);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("0.123"), 3);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("1.0"), 1);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("999.9999"), 4);
-        assert_eq!(DecimalPlaceCounter::get_nbr_decimal_places("123"), 0);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("123.45"), 2);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("0.123"), 3);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("1.0"), 1);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("999.9999"), 4);
+        assert_eq!(DimensionUtils::get_nbr_decimal_places("123"), 0);
     }
 
     #[test]
     fn test_integer_places_basic() {
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places("123.45"), 3);
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places("0.123"), 1);
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places("1.0"), 1);
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places("999.9999"), 3);
-        assert_eq!(DecimalPlaceCounter::get_nbr_integer_places("123"), 3);
+        assert_eq!(DimensionUtils::get_nbr_integer_places("123.45"), 3);
+        assert_eq!(DimensionUtils::get_nbr_integer_places("0.123"), 1);
+        assert_eq!(DimensionUtils::get_nbr_integer_places("1.0"), 1);
+        assert_eq!(DimensionUtils::get_nbr_integer_places("999.9999"), 3);
+        assert_eq!(DimensionUtils::get_nbr_integer_places("123"), 3);
     }
 
     #[test]
@@ -95,7 +95,7 @@ mod decimal_place_counter_tests {
             create_panel("123.45", "67.89", true),
         ];
         
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_decimal_places(&panels), 2);
+        assert_eq!(DimensionUtils::get_max_nbr_decimal_places(&panels), 2);
     }
 
     #[test]
@@ -106,7 +106,7 @@ mod decimal_place_counter_tests {
             create_panel("999", "888.1", true),       // 1 decimal place
         ];
         
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_decimal_places(&panels), 3);
+        assert_eq!(DimensionUtils::get_max_nbr_decimal_places(&panels), 3);
     }
 
     #[test]
@@ -118,7 +118,7 @@ mod decimal_place_counter_tests {
         ];
         
         // Should ignore disabled panels
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_decimal_places(&panels), 2);
+        assert_eq!(DimensionUtils::get_max_nbr_decimal_places(&panels), 2);
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod decimal_place_counter_tests {
             create_panel("123.45", "67.89", true),
         ];
         
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_integer_places(&panels), 3);
+        assert_eq!(DimensionUtils::get_max_nbr_integer_places(&panels), 3);
     }
 
     #[test]
@@ -138,7 +138,7 @@ mod decimal_place_counter_tests {
             create_panel("99", "8888.1", true),       // 4 integer places (max)
         ];
         
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_integer_places(&panels), 4);
+        assert_eq!(DimensionUtils::get_max_nbr_integer_places(&panels), 4);
     }
 
     #[test]
@@ -150,27 +150,27 @@ mod decimal_place_counter_tests {
         ];
         
         // Should ignore disabled panels
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_integer_places(&panels), 3);
+        assert_eq!(DimensionUtils::get_max_nbr_integer_places(&panels), 3);
     }
 
     #[test]
     fn test_validate_and_count_places_valid_inputs() {
-        let result = DecimalPlaceCounter::validate_and_count_places("123.45").unwrap();
+        let result = DimensionUtils::validate_and_count_places("123.45").unwrap();
         assert_eq!(result, (3, 2));
 
-        let result = DecimalPlaceCounter::validate_and_count_places("0.123").unwrap();
+        let result = DimensionUtils::validate_and_count_places("0.123").unwrap();
         assert_eq!(result, (1, 3));
 
-        let result = DecimalPlaceCounter::validate_and_count_places("999").unwrap();
+        let result = DimensionUtils::validate_and_count_places("999").unwrap();
         assert_eq!(result, (3, 0));
     }
 
     #[test]
     fn test_validate_and_count_places_invalid_inputs() {
-        assert!(DecimalPlaceCounter::validate_and_count_places("").is_err());
-        assert!(DecimalPlaceCounter::validate_and_count_places("abc").is_err());
-        assert!(DecimalPlaceCounter::validate_and_count_places("12.34.56").is_err());
-        assert!(DecimalPlaceCounter::validate_and_count_places("not_a_number").is_err());
+        assert!(DimensionUtils::validate_and_count_places("").is_err());
+        assert!(DimensionUtils::validate_and_count_places("abc").is_err());
+        assert!(DimensionUtils::validate_and_count_places("12.34.56").is_err());
+        assert!(DimensionUtils::validate_and_count_places("not_a_number").is_err());
     }
 
     #[test]
@@ -182,8 +182,8 @@ mod decimal_place_counter_tests {
         // Overall max: 3 int + 3 dec = 6 total
 
         // Should pass with limit of 7 or 6
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 7).is_ok());
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 6).is_ok());
+        assert!(DimensionUtils::validate_digit_limits(&panels, 7).is_ok());
+        assert!(DimensionUtils::validate_digit_limits(&panels, 6).is_ok());
     }
 
     #[test]
@@ -195,16 +195,16 @@ mod decimal_place_counter_tests {
         // Overall max: 3 int + 3 dec = 6 total
 
         // Should fail with limit of 5 or less
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 5).is_err());
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 4).is_err());
+        assert!(DimensionUtils::validate_digit_limits(&panels, 5).is_err());
+        assert!(DimensionUtils::validate_digit_limits(&panels, 4).is_err());
     }
 
     #[test]
     fn test_empty_panels_collections() {
         let panels: Vec<Panel> = vec![];
         
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_decimal_places(&panels), 0);
-        assert_eq!(DecimalPlaceCounter::get_max_nbr_integer_places(&panels), 0);
-        assert!(DecimalPlaceCounter::validate_digit_limits(&panels, 1).is_ok());
+        assert_eq!(DimensionUtils::get_max_nbr_decimal_places(&panels), 0);
+        assert_eq!(DimensionUtils::get_max_nbr_integer_places(&panels), 0);
+        assert!(DimensionUtils::validate_digit_limits(&panels, 1).is_ok());
     }
 }

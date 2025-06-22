@@ -1,8 +1,7 @@
-//! Collection utilities for tile processing
+//! Grouping utilities for tile processing
 //!
-//! This module contains straightforward utility functions for working with collections
-//! of tiles and related data structures. These methods implement simple but essential
-//! logic for grouping, filtering, and analyzing tile collections.
+//! This module contains utilities for grouping tiles and generating
+//! optimized tile arrangements for computation.
 
 use std::collections::HashMap;
 use tracing::{debug, info, trace};

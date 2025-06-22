@@ -2,7 +2,7 @@
 //!
 //! This test suite validates the collection utility functions for tile processing.
 
-use cutlist_optimizer_cli::engine::service::collection_utils::CollectionUtils;
+use cutlist_optimizer_cli::engine::service::computation::grouping::CollectionUtils;
 use cutlist_optimizer_cli::models::{
     tile_dimensions::structs::TileDimensions,
     task::structs::Task,

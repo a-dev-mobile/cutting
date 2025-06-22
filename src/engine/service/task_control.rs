@@ -1,6 +1,6 @@
-//! Status and monitoring operations
+//! Task control operations
 //!
-//! This module handles task status retrieval, task listing, and monitoring operations.
+//! This module handles task status retrieval, task listing, stopping, and termination operations.
 
 use crate::{
     errors::Result,
@@ -12,7 +12,7 @@ use crate::{
 
 use super::core::CutListOptimizerServiceImpl;
 
-/// Status and monitoring operations implementation
+/// Task control operations implementation
 impl CutListOptimizerServiceImpl {
     /// Get the current status of a specific task
     pub async fn get_task_status_impl(&self, task_id: &str) -> Result<Option<TaskStatusResponse>> {
@@ -42,6 +42,28 @@ impl CutListOptimizerServiceImpl {
 
         let _ = (client_id, status); // Suppress unused parameter warnings
         Ok(vec![])
+    }
+
+    /// Stop a running task gracefully
+    pub async fn stop_task_impl(&self, task_id: &str) -> Result<Option<TaskStatusResponse>> {
+        self.ensure_initialized()?;
+        self.ensure_not_shutdown()?;
+
+        // TODO: Implement with running tasks manager
+        // For now, return None (task not found)
+        let _ = task_id;
+        Ok(None)
+    }
+
+    /// Terminate a task immediately (forceful stop)
+    pub async fn terminate_task_impl(&self, task_id: &str) -> Result<i32> {
+        self.ensure_initialized()?;
+        self.ensure_not_shutdown()?;
+
+        // TODO: Implement with running tasks manager
+        // For now, return -1 (task not found)
+        let _ = task_id;
+        Ok(-1)
     }
 }
 

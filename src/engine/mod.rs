@@ -13,7 +13,7 @@ pub mod stock;
 
 pub use cut_list_thread::CutListThread;
 pub use comparator::SolutionComparator;
-pub use service::{CutListOptimizerService, CutListOptimizerServiceImpl};
+pub use service::CutListOptimizerServiceImpl;
 pub use running_tasks::{
     RunningTasks, 
     TaskManager, 

@@ -1,13 +1,13 @@
-//! Task lifecycle operations
+//! Task submission operations
 //!
-//! This module handles task submission, stopping, and termination operations.
+//! This module handles task submission and all related validation logic.
 
 use chrono::Utc;
 
 use crate::{
     errors::Result,
     models::{
-        CalculationRequest, CalculationSubmissionResult, TaskStatusResponse,
+        CalculationRequest, CalculationSubmissionResult,
         enums::StatusCode,
         tile_dimensions::structs::TileDimensions,
         configuration::structs::Configuration,
@@ -20,10 +20,10 @@ use crate::{
 
 use super::{
     core::{CutListOptimizerServiceImpl, MAX_PANELS_LIMIT, MAX_STOCK_PANELS_LIMIT, MAX_ALLOWED_DIGITS},
-    collection_utils::CollectionUtils,
+    computation::grouping::CollectionUtils,
 };
 
-/// Task lifecycle operations implementation
+/// Task submission operations implementation
 impl CutListOptimizerServiceImpl {
     /// Submit a new optimization task for processing
     pub async fn submit_task_impl(&self, request: CalculationRequest) -> Result<CalculationSubmissionResult> {
@@ -45,7 +45,7 @@ impl CutListOptimizerServiceImpl {
         }
 
         // Generate task ID using date format + counter (like Java implementation)
-        let task_id = self.generate_task_id_with_date();
+        let task_id = self.generate_task_id();
 
         // Start computation in background
         let request_clone = request.clone();
@@ -61,36 +61,6 @@ impl CutListOptimizerServiceImpl {
             status_code: StatusCode::Ok,
             task_id: Some(task_id),
         })
-    }
-
-    /// Stop a running task gracefully
-    pub async fn stop_task_impl(&self, task_id: &str) -> Result<Option<TaskStatusResponse>> {
-        self.ensure_initialized()?;
-        self.ensure_not_shutdown()?;
-
-        // TODO: Implement with running tasks manager
-        // For now, return None (task not found)
-        let _ = task_id;
-        Ok(None)
-    }
-
-    /// Terminate a task immediately (forceful stop)
-    pub async fn terminate_task_impl(&self, task_id: &str) -> Result<i32> {
-        self.ensure_initialized()?;
-        self.ensure_not_shutdown()?;
-
-        // TODO: Implement with running tasks manager
-        // For now, return -1 (task not found)
-        let _ = task_id;
-        Ok(-1)
-    }
-
-    /// Generate task ID with date format (like Java implementation)
-    fn generate_task_id_with_date(&self) -> String {
-        let now = Utc::now();
-        let date_part = now.format("%Y%m%d%H%M").to_string();
-        let counter = self.task_id_counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        format!("{}{}", date_part, counter)
     }
 
     /// Check client task limit
@@ -247,7 +217,6 @@ impl CutListOptimizerServiceImpl {
 
         Ok(())
     }
-
 }
 
 /// Request validation utilities
