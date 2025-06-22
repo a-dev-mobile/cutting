@@ -129,3 +129,5 @@ async fn test_service_destroy() {
     let stats_result = service.get_stats().await;
     assert!(stats_result.is_err(), "Operations should fail after service is destroyed");
 }
+
+

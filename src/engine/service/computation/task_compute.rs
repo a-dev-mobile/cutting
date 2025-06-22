@@ -1,7 +1,9 @@
 //! Main computation operations
 //!
-//! This module handles the first compute method - the main computation logic
+//! This module handles the core compute method - the main computation logic
 //! that creates tasks, groups by materials, and spawns threads for materials.
+//! 
+//! Based on Java CutListOptimizerServiceImpl.compute() method (lines 200-250)
 
 use crate::{
     errors::{Result, AppError},
@@ -10,24 +12,23 @@ use crate::{
         calculation_submission_result::CalculationSubmissionResult,
         task::Task,
         tile_dimensions::TileDimensions,
-        panel::Panel,
-        enums::Status,
+        enums::status_code::StatusCode,
     },
-    engine::running_tasks::{TaskManager, get_running_tasks_instance},
+    engine::{
+        running_tasks::{TaskManager, get_running_tasks_instance},
+        service::computation::{
+            dimension_utils::DimensionUtils,
+            material_compute,
+        },
+    },
     logging::macros::{info, debug, warn, error},
 };
 
-use super::{
-    grouping::CollectionUtils,
-    dimension_utils::DimensionUtils,
-    material_compute,
-};
-
-use std::{collections::{HashSet, HashMap}, sync::Arc};
-use parking_lot::RwLock;
-use tokio::task::JoinHandle;
+use std::collections::{HashSet, HashMap};
 
 /// Group tiles by material (Java equivalent of getTileDimensionsPerMaterial)
+/// 
+/// Java reference: Map<String, List<TileDimensions>> getTileDimensionsPerMaterial(List<TileDimensions> list)
 fn get_tile_dimensions_per_material(tiles: &[TileDimensions]) -> HashMap<String, Vec<TileDimensions>> {
     let mut material_map: HashMap<String, Vec<TileDimensions>> = HashMap::new();
     
@@ -53,10 +54,13 @@ fn get_tile_dimensions_per_material(tiles: &[TileDimensions]) -> HashMap<String,
 /// 4. Task creation and setup in RunningTasks
 /// 5. Material grouping
 /// 6. Spawning computation for each material
-pub async fn compute_task_complete(request: CalculationRequest, task_id: String) -> Result<()> {
+pub async fn compute_task_complete(
+    request: CalculationRequest, 
+    task_id: String
+) -> Result<()> {
     info!("Starting complete computation for task: {}", task_id);
 
-    // 1. Input validation
+    // Step 1: Input validation
     if request.panels.is_empty() {
         return Err(AppError::invalid_input("No panels provided"));
     }
@@ -64,7 +68,7 @@ pub async fn compute_task_complete(request: CalculationRequest, task_id: String)
         return Err(AppError::invalid_input("No stock panels provided"));
     }
 
-    // 2. Calculate scaling factor (Java lines ~205-215)
+    // Step 2: Calculate scaling factor (Java lines ~205-215)
     let panels = &request.panels;
     let stock_panels = &request.stock_panels;
     
@@ -103,7 +107,7 @@ pub async fn compute_task_complete(request: CalculationRequest, task_id: String)
     debug!("Scaling factor: {} (decimal places: {}, integer places: {})", 
            scaling_factor, max_decimal_places, max_integer_places);
 
-    // 3. Convert panels to TileDimensions with scaling (Java lines ~216-235)
+    // Step 3: Convert panels to TileDimensions with scaling (Java lines ~216-235)
     let mut tiles = Vec::new();
     let mut stock_tiles = Vec::new();
     
@@ -157,10 +161,10 @@ pub async fn compute_task_complete(request: CalculationRequest, task_id: String)
     info!("Converted {} panels to {} tiles, {} stock panels to {} stock tiles", 
           panels.len(), tiles.len(), stock_panels.len(), stock_tiles.len());
 
-    // 4. Create and setup task (Java lines ~236-242)
+    // Step 4: Create and setup task (Java lines ~236-242)
     let mut task = Task::new(task_id.clone());
-    task.calculation_request = Some(request.clone());
-    task.factor = scaling_factor;
+    task.set_calculation_request(request.clone());
+    task.set_factor(scaling_factor);
     
     // Add task to running tasks: this.runningTasks.addTask(task);
     let running_tasks = get_running_tasks_instance();
@@ -169,15 +173,15 @@ pub async fn compute_task_complete(request: CalculationRequest, task_id: String)
     let task_arc = running_tasks.get_task(&task_id)
         .ok_or_else(|| AppError::invalid_input(&format!("Failed to retrieve task {}", task_id)))?;
 
-    // 5. Group by materials (Java lines ~243-246)
+    // Step 5: Group by materials (Java lines ~243-246)
     let tiles_per_material = get_tile_dimensions_per_material(&tiles);
     let stock_per_material = get_tile_dimensions_per_material(&stock_tiles);
     
     // Update task with material data (Java equivalent)
     {
         let mut task = task_arc.write();
-        task.tile_dimensions_per_material = Some(tiles_per_material.clone());
-        task.stock_dimensions_per_material = Some(stock_per_material.clone());
+        task.set_tile_dimensions_per_material(tiles_per_material.clone());
+        task.set_stock_dimensions_per_material(stock_per_material.clone());
     }
     
     // Find all materials and determine which can be computed (Java lines ~247-260)
@@ -211,7 +215,7 @@ pub async fn compute_task_complete(request: CalculationRequest, task_id: String)
         }
     }
 
-    // 6. Spawn computation for each material (Java lines ~261-270)
+    // Step 6: Spawn computation for each material (Java lines ~261-270)
     for material in materials_to_compute {
         if let (Some(material_tiles), Some(material_stock)) = (
             tiles_per_material.get(&material),
@@ -247,8 +251,8 @@ pub async fn compute_task_complete(request: CalculationRequest, task_id: String)
     
     // Check if task should finish (Java: task.checkIfFinished())
     {
-        let task = task_arc.read();
-        task.check_if_finished();
+        let _task = task_arc.read();
+        _task.check_if_finished();
     }
     
     info!("Task {} computation setup complete", task_id);
@@ -260,7 +264,7 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
     compute_task_complete(request, task_id.clone()).await?;
     
     Ok(CalculationSubmissionResult::new(
-        crate::models::enums::status_code::StatusCode::Ok,
+        StatusCode::Ok,
         task_id
     ))
 }
@@ -271,7 +275,7 @@ pub async fn check_task_completion(task_id: &str) -> Result<bool> {
     let running_tasks = get_running_tasks_instance();
     
     if let Some(task_arc) = running_tasks.get_task(task_id) {
-        let _task = task_arc.read();
+        let task = task_arc.read();
         
         // Check if all materials have completed
         // This would involve checking the per_material_percentage_done
@@ -287,22 +291,24 @@ pub async fn check_task_completion(task_id: &str) -> Result<bool> {
 /// Simplified version for testing - creates task and groups by material
 pub async fn compute_task_simple(request: CalculationRequest, task_id: String) -> Result<()> {
     // Convert panels to tiles
-    let (tiles, stock_tiles, _factor) = DimensionUtils::convert_panels_to_tiles(
+    let (tiles, stock_tiles, factor) = DimensionUtils::convert_panels_to_tiles(
         &request.panels, 
         &request.stock_panels, 
         6
     )?;
 
     // Create task
-    let task = Task::new(task_id.clone());
+    let mut task = Task::new(task_id.clone());
+    task.set_calculation_request(request.clone());
+    task.set_factor(factor);
     
     // Add task to running tasks
     let running_tasks = get_running_tasks_instance();
     running_tasks.add_task(task)?;
     
     // Group tiles by material
-    let tiles_per_material = CollectionUtils::get_tile_dimensions_per_material(&tiles)?;
-    let stock_per_material = CollectionUtils::get_tile_dimensions_per_material(&stock_tiles)?;
+    let tiles_per_material = get_tile_dimensions_per_material(&tiles);
+    let stock_per_material = get_tile_dimensions_per_material(&stock_tiles);
 
     // Spawn computation for each material that has both tiles and stock
     for (material, material_tiles) in tiles_per_material {
@@ -317,11 +323,6 @@ pub async fn compute_task_simple(request: CalculationRequest, task_id: String) -
                     // Get task from running tasks for the computation
                     let running_tasks = get_running_tasks_instance();
                     if let Some(task_arc) = running_tasks.get_task(&task_id_clone) {
-                        // Clone the task data we need without holding the lock
-                        let task_data = {
-                            let task = task_arc.read();
-                            task.clone()
-                        };
                         let _ = material_compute::compute_material(
                             material_tiles,
                             material_stock_clone,

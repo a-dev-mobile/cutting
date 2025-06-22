@@ -6,7 +6,7 @@
 
 use cutlist_optimizer_cli::{
     engine::{
-        service::computation::task_compute::{compute_task_simple, compute_task},
+        service::computation::task_compute::{compute_task_simple, compute_task, compute_task_complete},
         running_tasks::{get_running_tasks_instance, TaskManager},
     },
     models::{
@@ -243,8 +243,8 @@ async fn test_compute_task_with_empty_panels() -> Result<()> {
     
     let task_id = Uuid::new_v4().to_string();
     
-    // This should fail because we have no panels
-    let result = compute_task_simple(request, task_id).await;
+    // This should fail because we have no panels - use compute_task_complete which has validation
+    let result = compute_task_complete(request, task_id).await;
     assert!(result.is_err(), "Should fail with empty panels");
     
     Ok(())
