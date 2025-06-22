@@ -187,32 +187,53 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         }
     }
     
-    async fn get_tasks(&self, client_id: &str, status: Status) -> Result<Vec<String>> {
+    async fn get_tasks(&self, status: Option<Status>) -> Result<Vec<String>> {
+        use crate::engine::running_tasks::{get_running_tasks_instance, TaskManager};
+        
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
-        // TODO: Implement actual task listing logic
-        // This should include:
-        // 1. Query running tasks registry by client ID
-        // 2. Filter by status if specified
-        // 3. Return list of matching task IDs
-
-        let _ = (client_id, status); // Suppress unused parameter warnings
-        Ok(vec![])
+        // Get the running tasks instance
+        let running_tasks = get_running_tasks_instance();
+        
+        // Filter by status if provided, otherwise return all tasks
+        let task_ids = match status {
+            Some(filter_status) => running_tasks.get_tasks_with_status(filter_status),
+            None => {
+                // Get all tasks and extract their IDs
+                running_tasks.get_tasks()
+                    .iter()
+                    .map(|task_arc| task_arc.read().id.clone())
+                    .collect()
+            }
+        };
+        
+        Ok(task_ids)
     }
     
     async fn get_stats(&self) -> Result<Stats> {
+        use crate::engine::running_tasks::{get_running_tasks_instance, StatisticsCollector};
+        
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
-        // TODO: Implement actual statistics gathering
-        // This should include:
-        // 1. Query running tasks for current counts
-        // 2. Get performance metrics
-        // 3. Calculate throughput statistics
-        // 4. Return comprehensive stats
-
-        Ok(Stats::new())
+        // Get the running tasks instance
+        let running_tasks = get_running_tasks_instance();
+        
+        // Get base stats from running tasks
+        let mut stats = running_tasks.get_stats();
+        
+        // TODO: Add thread executor statistics when available
+        // For now, we'll use placeholder values for thread statistics
+        // In the Java version, these come from taskExecutor.getActiveCount(), etc.
+        stats.nbr_running_threads = 0; // Would come from task executor
+        stats.nbr_queued_threads = 0;  // Would come from task executor queue size
+        
+        // TODO: Add watch dog task reports when available
+        // In the Java version, this comes from this.watchDog.getTaskReports()
+        // For now, we use the task reports from running tasks
+        
+        Ok(stats)
     }
     
     fn set_allow_multiple_tasks_per_client(&mut self, allow: bool) {

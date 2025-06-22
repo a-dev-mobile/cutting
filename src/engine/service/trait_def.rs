@@ -23,8 +23,8 @@ pub trait CutListOptimizerService {
     /// Get task status by ID
     async fn get_task_status(&self, task_id: &str) -> Result<Option<TaskStatusResponse>>;
     
-    /// Get list of tasks for client with specific status
-    async fn get_tasks(&self, client_id: &str, status: Status) -> Result<Vec<String>>;
+    /// Get list of tasks filtered by status (client_id logic removed)
+    async fn get_tasks(&self, status: Option<Status>) -> Result<Vec<String>>;
     
     /// Stop a task gracefully
     async fn stop_task(&self, task_id: &str) -> Result<Option<TaskStatusResponse>>;
