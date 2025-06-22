@@ -8,6 +8,7 @@ use crate::engine::running_tasks::{RunningTasks, TaskManager};
 use super::config::WatchDogConfig;
 
 /// Task monitoring component
+#[derive(Debug)]
 pub struct TaskMonitor {
     running_tasks: Arc<RunningTasks>,
     config: WatchDogConfig,

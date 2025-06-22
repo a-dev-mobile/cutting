@@ -12,6 +12,7 @@ use super::statistics::WatchDogStatistics;
 use crate::engine::running_tasks::RunningTasks;
 
 /// WatchDog monitors running tasks and handles cleanup of stale tasks
+#[derive(Debug)]
 pub struct WatchDog {
     monitor: TaskMonitor,
     cleanup: TaskCleanup,

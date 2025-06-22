@@ -6,6 +6,7 @@ use crate::engine::running_tasks::{RunningTasks, TaskManager};
 use crate::models::enums::Status;
 
 /// Task cleanup component
+#[derive(Debug)]
 pub struct TaskCleanup {
     running_tasks: Arc<RunningTasks>,
 }

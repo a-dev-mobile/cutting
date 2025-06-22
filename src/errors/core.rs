@@ -20,6 +20,9 @@ pub enum CoreError {
     #[error("CSV parsing error: {0}")]
     Csv(#[from] csv::Error),
 
+    #[error("Parse float error: {0}")]
+    ParseFloat(#[from] std::num::ParseFloatError),
+
     #[error("Internal error: {message}")]
     Internal { message: String },
 }

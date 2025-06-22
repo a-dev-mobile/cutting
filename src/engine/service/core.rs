@@ -5,11 +5,59 @@
 
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
+    Arc,
+};
+use tokio::sync::{Semaphore, mpsc, Mutex};
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+
+use crate::{
+    errors::Result,
+    models::{
+        tile_dimensions::structs::TileDimensions,
+        grouped_tile_dimensions::structs::GroupedTileDimensions,
+        panel::structs::Panel,
+        task::structs::Task,
+    },
+    engine::{
+        watch_dog::core::WatchDog,
+        running_tasks::structs::RunningTasks,
+    },
 };
 
-use uuid::Uuid;
+/// Task executor for managing computation threads
+#[derive(Debug)]
+pub struct TaskExecutor {
+    /// Semaphore to limit concurrent threads
+    pub semaphore: Arc<Semaphore>,
+    /// Channel for task requests
+    pub task_sender: mpsc::UnboundedSender<String>,
+    /// Task receiver
+    pub task_receiver: Arc<Mutex<mpsc::UnboundedReceiver<String>>>,
+    /// Maximum concurrent threads
+    pub max_concurrent_threads: usize,
+    /// Active thread count
+    pub active_count: Arc<AtomicU64>,
+    /// Completed task count
+    pub completed_count: Arc<AtomicU64>,
+}
 
-use crate::errors::Result;
+/// Permutation thread spawner for managing computation threads
+#[derive(Debug)]
+pub struct PermutationThreadSpawner {
+    max_alive_spawner_threads: usize,
+    interval_between_max_alive_check: u64,
+    nbr_total_threads: Arc<AtomicU64>,
+    nbr_unfinished_threads: Arc<AtomicU64>,
+}
+
+/// Progress tracker for monitoring task progress
+#[derive(Debug)]
+pub struct ProgressTracker {
+    total_permutations: usize,
+    task_id: String,
+    material: String,
+}
 
 /// Main implementation of the CutList Optimizer Service
 /// 
@@ -20,12 +68,36 @@ pub struct CutListOptimizerServiceImpl {
     /// Whether multiple tasks per client are allowed
     allow_multiple_tasks_per_client: AtomicBool,
     /// Task ID counter for generating unique task IDs
-    task_id_counter: AtomicU64,
+    pub(crate) task_id_counter: AtomicU64,
     /// Service initialization status
     is_initialized: AtomicBool,
     /// Service shutdown status
     is_shutdown: AtomicBool,
+    /// Thread coordination semaphore
+    thread_semaphore: Arc<Semaphore>,
+    /// Maximum threads per task
+    max_threads_per_task: usize,
+    /// Service start time
+    start_time: DateTime<Utc>,
+    /// Running tasks manager
+    running_tasks: Option<Arc<RunningTasks>>,
+    /// Task executor
+    task_executor: Option<Arc<TaskExecutor>>,
+    /// Watch dog for monitoring
+    watch_dog: Option<Arc<WatchDog>>,
+    /// Date format for task ID generation
+    date_format: String,
 }
+
+/// Constants from Java implementation
+pub const MAX_PERMUTATION_ITERATIONS: usize = 1000;
+pub const MAX_STOCK_ITERATIONS: usize = 1000;
+pub const MAX_ALLOWED_DIGITS: usize = 6;
+pub const THREAD_QUEUE_SIZE: usize = 1000;
+pub const MAX_ACTIVE_THREADS_PER_TASK: usize = 5;
+pub const MAX_PERMUTATIONS_WITH_SOLUTION: usize = 150;
+pub const MAX_PANELS_LIMIT: usize = 5000;
+pub const MAX_STOCK_PANELS_LIMIT: usize = 5000;
 
 impl CutListOptimizerServiceImpl {
     /// Create a new service instance
@@ -35,13 +107,22 @@ impl CutListOptimizerServiceImpl {
             task_id_counter: AtomicU64::new(0),
             is_initialized: AtomicBool::new(false),
             is_shutdown: AtomicBool::new(false),
+            thread_semaphore: Arc::new(Semaphore::new(MAX_ACTIVE_THREADS_PER_TASK)),
+            max_threads_per_task: MAX_ACTIVE_THREADS_PER_TASK,
+            start_time: Utc::now(),
+            running_tasks: None,
+            task_executor: None,
+            watch_dog: None,
+            date_format: "%Y%m%d%H%M".to_string(),
         }
     }
 
-    /// Generate a unique task ID
+    /// Generate a unique task ID (following Java pattern)
     pub(crate) fn generate_task_id(&self) -> String {
+        let now = Utc::now();
+        let date_part = now.format(&self.date_format).to_string();
         let counter = self.task_id_counter.fetch_add(1, Ordering::Relaxed);
-        format!("task-{}-{}", Uuid::new_v4().simple(), counter)
+        format!("{}{}", date_part, counter)
     }
 
     /// Check if the service is initialized
@@ -92,6 +173,275 @@ impl CutListOptimizerServiceImpl {
     /// Set the shutdown status
     pub(crate) fn set_shutdown(&self, shutdown: bool) {
         self.is_shutdown.store(shutdown, Ordering::Relaxed);
+    }
+
+    /// Remove duplicated permutations (ported from Java)
+    pub(crate) fn remove_duplicated_permutations(&self, permutations: &mut Vec<Vec<TileDimensions>>) -> usize {
+        let mut hash_codes = Vec::new();
+        let mut removed_count = 0;
+        
+        permutations.retain(|permutation| {
+            let mut hash_code = 0i32;
+            for tile in permutation {
+                hash_code = hash_code.wrapping_mul(31).wrapping_add(tile.dimensions_hash() as i32);
+            }
+            
+            if hash_codes.contains(&hash_code) {
+                removed_count += 1;
+                false
+            } else {
+                hash_codes.push(hash_code);
+                true
+            }
+        });
+        
+        removed_count
+    }
+
+    /// Check if optimization is one-dimensional (ported from Java)
+    pub(crate) fn is_one_dimensional_optimization(&self, tiles: &[TileDimensions], stock_tiles: &[TileDimensions]) -> bool {
+        let mut common_dimensions = Vec::new();
+        
+        if let Some(first_tile) = tiles.first() {
+            common_dimensions.push(first_tile.width);
+            common_dimensions.push(first_tile.height);
+        }
+        
+        // Check tiles
+        for tile in tiles {
+            common_dimensions.retain(|&dim| dim == tile.width || dim == tile.height);
+            if common_dimensions.is_empty() {
+                return false;
+            }
+        }
+        
+        // Check stock tiles
+        for tile in stock_tiles {
+            common_dimensions.retain(|&dim| dim == tile.width || dim == tile.height);
+            if common_dimensions.is_empty() {
+                return false;
+            }
+        }
+        
+        true
+    }
+
+    /// Generate groups for tiles (ported from Java)
+    pub(crate) fn generate_groups(&self, tiles: &[TileDimensions], stock_tiles: &[TileDimensions], task: &Task) -> Vec<GroupedTileDimensions> {
+        let mut tile_counts = HashMap::new();
+        
+        // Count occurrences of each tile type
+        for tile in tiles {
+            let key = tile.dimensions_string();
+            *tile_counts.entry(key).or_insert(0) += 1;
+        }
+        
+        // Log tile information
+        let mut log_message = String::new();
+        for (tile_str, count) in &tile_counts {
+            log_message.push_str(&format!("{}*{} ", tile_str, count));
+        }
+        
+        println!("Task[{}] TotalNbrTiles[{}] Tiles: {}", task.id, tiles.len(), log_message);
+        
+        let max_group_size = std::cmp::max(tiles.len() / 100, 1);
+        let is_one_dimensional = self.is_one_dimensional_optimization(tiles, stock_tiles);
+        
+        let group_size_limit = if is_one_dimensional {
+            println!("Task[{}] is one dimensional optimization", task.id);
+            1
+        } else {
+            max_group_size
+        };
+        
+        let mut result = Vec::new();
+        let mut group_counts = HashMap::new();
+        let mut current_group = 0;
+        
+        for tile in tiles {
+            let group_key = format!("{}{}", tile.dimensions_string(), current_group);
+            let current_count = group_counts.entry(group_key.clone()).or_insert(0);
+            *current_count += 1;
+            
+            result.push(GroupedTileDimensions::from_tile_dimensions(tile.clone(), current_group));
+            
+            let total_for_tile = tile_counts.get(&tile.dimensions_string()).unwrap_or(&0);
+            if *total_for_tile > group_size_limit && *current_count > total_for_tile / 4 {
+                println!("Task[{}] Splitting panel set [{}] with [{}] units into two groups", 
+                    task.id, tile.dimensions_string(), total_for_tile);
+                current_group += 1;
+            }
+        }
+        
+        result
+    }
+
+    /// Get distinct grouped tile dimensions (ported from Java)
+    pub(crate) fn get_distinct_grouped_tile_dimensions<T: std::hash::Hash + Eq + Clone>(
+        &self, 
+        items: &[T]
+    ) -> HashMap<T, i32> {
+        let mut result = HashMap::new();
+        
+        for item in items {
+            *result.entry(item.clone()).or_insert(0) += 1;
+        }
+        
+        result
+    }
+
+    /// Get tile dimensions per material (ported from Java)
+    pub(crate) fn get_tile_dimensions_per_material(&self, tiles: &[TileDimensions]) -> HashMap<String, Vec<TileDimensions>> {
+        let mut result = HashMap::new();
+        
+        for tile in tiles {
+            result.entry(tile.material.clone())
+                .or_insert_with(Vec::new)
+                .push(tile.clone());
+        }
+        
+        result
+    }
+
+    /// Get number of decimal places in a string (ported from Java)
+    pub(crate) fn get_nbr_decimal_places(&self, value: &str) -> usize {
+        if let Some(dot_index) = value.find('.') {
+            value.len() - dot_index - 1
+        } else {
+            0
+        }
+    }
+
+    /// Get number of integer places in a string (ported from Java)
+    pub(crate) fn get_nbr_integer_places(&self, value: &str) -> usize {
+        if let Some(dot_index) = value.find('.') {
+            dot_index
+        } else {
+            value.len()
+        }
+    }
+
+    /// Get maximum number of decimal places from panels (ported from Java)
+    pub(crate) fn get_max_nbr_decimal_places(&self, panels: &[Panel]) -> usize {
+        panels.iter()
+            .filter(|panel| panel.enabled)
+            .map(|panel| {
+                let width_str = panel.width.as_deref().unwrap_or("0");
+                let height_str = panel.height.as_deref().unwrap_or("0");
+                std::cmp::max(
+                    self.get_nbr_decimal_places(width_str),
+                    self.get_nbr_decimal_places(height_str)
+                )
+            })
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Get maximum number of integer places from panels (ported from Java)
+    pub(crate) fn get_max_nbr_integer_places(&self, panels: &[Panel]) -> usize {
+        panels.iter()
+            .filter(|panel| panel.enabled)
+            .map(|panel| {
+                let width_str = panel.width.as_deref().unwrap_or("0");
+                let height_str = panel.height.as_deref().unwrap_or("0");
+                std::cmp::max(
+                    self.get_nbr_integer_places(width_str),
+                    self.get_nbr_integer_places(height_str)
+                )
+            })
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Check if thread is eligible to start (ported from Java)
+    pub(crate) fn is_thread_eligible_to_start(&self, _group: &str, _task: &Task, _material: &str) -> bool {
+        // Simplified implementation - in full version would check thread group rankings
+        true
+    }
+}
+
+impl TaskExecutor {
+    pub fn new(max_concurrent_threads: usize) -> Self {
+        let (sender, receiver) = mpsc::unbounded_channel();
+        
+        Self {
+            semaphore: Arc::new(Semaphore::new(max_concurrent_threads)),
+            task_sender: sender,
+            task_receiver: Arc::new(Mutex::new(receiver)),
+            max_concurrent_threads,
+            active_count: Arc::new(AtomicU64::new(0)),
+            completed_count: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    pub fn get_active_count(&self) -> u64 {
+        self.active_count.load(Ordering::Relaxed)
+    }
+
+    pub fn get_completed_task_count(&self) -> u64 {
+        self.completed_count.load(Ordering::Relaxed)
+    }
+
+    pub fn get_queue_size(&self) -> usize {
+        // Approximation since we can't get exact queue size from unbounded channel
+        0
+    }
+}
+
+impl PermutationThreadSpawner {
+    pub fn new() -> Self {
+        Self {
+            max_alive_spawner_threads: MAX_ACTIVE_THREADS_PER_TASK,
+            interval_between_max_alive_check: 1000,
+            nbr_total_threads: Arc::new(AtomicU64::new(0)),
+            nbr_unfinished_threads: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    pub fn set_max_alive_spawner_threads(&mut self, max: usize) {
+        self.max_alive_spawner_threads = max;
+    }
+
+    pub fn set_interval_between_max_alive_check(&mut self, interval: u64) {
+        self.interval_between_max_alive_check = interval;
+    }
+
+    pub fn get_nbr_total_threads(&self) -> u64 {
+        self.nbr_total_threads.load(Ordering::Relaxed)
+    }
+
+    pub fn get_nbr_unfinished_threads(&self) -> u64 {
+        self.nbr_unfinished_threads.load(Ordering::Relaxed)
+    }
+
+    pub async fn spawn<F>(&self, task: F) 
+    where 
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        self.nbr_total_threads.fetch_add(1, Ordering::Relaxed);
+        self.nbr_unfinished_threads.fetch_add(1, Ordering::Relaxed);
+        
+        let unfinished_counter = Arc::clone(&self.nbr_unfinished_threads);
+        
+        tokio::spawn(async move {
+            task.await;
+            unfinished_counter.fetch_sub(1, Ordering::Relaxed);
+        });
+    }
+}
+
+impl ProgressTracker {
+    pub fn new(total_permutations: usize, task_id: String, material: String) -> Self {
+        Self {
+            total_permutations,
+            task_id,
+            material,
+        }
+    }
+
+    pub fn refresh_task_status_info(&self) {
+        // Implementation for refreshing task status
+        println!("Refreshing task status for task[{}] material[{}]", self.task_id, self.material);
     }
 }
 

@@ -7,6 +7,7 @@ use crate::models::stats::Stats;
 use crate::models::enums::Status;
 
 /// WatchDog statistics component
+#[derive(Debug)]
 pub struct WatchDogStatistics {
     running_tasks: Arc<RunningTasks>,
 }
