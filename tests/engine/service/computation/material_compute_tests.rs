@@ -6,7 +6,7 @@
 //! 3. Task status is updated properly
 
 use cutlist_optimizer_cli::{
-    engine::service::computation::material_compute::compute_material,
+    // engine::service::computation::material_compute::compute_material,
     models::{
         tile_dimensions::structs::TileDimensions,
         configuration::structs::Configuration,

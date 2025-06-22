@@ -18,7 +18,7 @@ impl TileDimensions {
 
     /// Calculate the area of the tile
     pub fn area(&self) -> i32 {
-        self.width * self.height
+        self.width.saturating_mul(self.height)
     }
 
     /// Check if this tile can fit within a container
