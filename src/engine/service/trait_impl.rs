@@ -38,7 +38,7 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
-        // Validate request
+        // Validate panels using RequestValidator (already exists)
         if let Some(error_code) = RequestValidator::validate_request(&request).await {
             return Ok(CalculationSubmissionResult {
                 status_code: error_code,
@@ -46,16 +46,10 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
             });
         }
 
-        // Check if multiple tasks per client are allowed
-        if !self.get_allow_multiple_tasks_per_client() {
-            // TODO: Add client_info field to CalculationRequest or remove this check
-            // For now, skip client task limit check
-        }
-
-        // Generate task ID using date format + counter (like Java implementation)
+        // Generate task_id using core.rs method
         let task_id = self.generate_task_id();
 
-        // Start computation in background
+        // Launch tokio::spawn with compute_task in background
         let request_clone = request.clone();
         let task_id_clone = task_id.clone();
         
@@ -65,6 +59,7 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
             }
         });
 
+        // Return CalculationSubmissionResult with success status
         Ok(CalculationSubmissionResult {
             status_code: StatusCode::Ok,
             task_id: Some(task_id),
