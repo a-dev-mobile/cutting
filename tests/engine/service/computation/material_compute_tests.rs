@@ -18,6 +18,8 @@ use cutlist_optimizer_cli::{
 
 use tokio;
 use uuid::Uuid;
+use std::sync::Arc;
+use parking_lot::RwLock;
 
 /// Helper function to create test tiles for a specific material
 fn create_test_tiles(material: &str, count: usize) -> Vec<TileDimensions> {
@@ -61,16 +63,17 @@ async fn test_compute_material_generates_groups() -> Result<()> {
     // Create test task
     let task_id = Uuid::new_v4().to_string();
     let task = Task::new(task_id.clone());
+    let task_arc = Arc::new(RwLock::new(task));
     
     // Verify initial task status
-    assert_eq!(task.status(), Status::Queued, "Task should start with Queued status");
+    assert_eq!(task_arc.read().status(), Status::Queued, "Task should start with Queued status");
     
     // Call compute_material
     let result = compute_material(
         tiles,
         stock_tiles,
         &configuration,
-        &task,
+        task_arc,
         "Wood",
     ).await;
     
@@ -93,19 +96,20 @@ async fn test_compute_material_updates_task_status() -> Result<()> {
     // Create test task
     let task_id = Uuid::new_v4().to_string();
     let task = Task::new(task_id.clone());
+    let task_arc = Arc::new(RwLock::new(task));
     
     // Add the material to the task so we can track its progress
-    task.add_material_to_compute("Metal".to_string());
+    task_arc.read().add_material_to_compute("Metal".to_string());
     
     // Verify initial material percentage is 0
-    assert_eq!(task.percentage_done(), 0, "Initial percentage should be 0");
+    assert_eq!(task_arc.read().percentage_done(), 0, "Initial percentage should be 0");
     
     // Call compute_material
     let result = compute_material(
         tiles,
         stock_tiles,
         &configuration,
-        &task,
+        task_arc.clone(),
         "Metal",
     ).await;
     
@@ -115,7 +119,7 @@ async fn test_compute_material_updates_task_status() -> Result<()> {
     // Verify that the material status was updated to completed (100%)
     // Note: The percentage_done() method returns the average across all materials
     // Since we only have one material, it should be 100%
-    assert_eq!(task.percentage_done(), 100, "Material should be marked as 100% complete");
+    assert_eq!(task_arc.read().percentage_done(), 100, "Material should be marked as 100% complete");
     
     Ok(())
 }
@@ -127,12 +131,13 @@ async fn test_compute_material_with_empty_tiles() -> Result<()> {
     let stock_tiles = create_test_stock_tiles("Wood", 2);
     let configuration = Configuration::default();
     let task = Task::new(Uuid::new_v4().to_string());
+    let task_arc = Arc::new(RwLock::new(task));
     
     let result = compute_material(
         tiles,
         stock_tiles,
         &configuration,
-        &task,
+        task_arc,
         "Wood",
     ).await;
     
@@ -149,12 +154,13 @@ async fn test_compute_material_with_empty_stock() -> Result<()> {
     let stock_tiles = vec![];
     let configuration = Configuration::default();
     let task = Task::new(Uuid::new_v4().to_string());
+    let task_arc = Arc::new(RwLock::new(task));
     
     let result = compute_material(
         tiles,
         stock_tiles,
         &configuration,
-        &task,
+        task_arc,
         "Wood",
     ).await;
     
@@ -178,16 +184,18 @@ async fn test_compute_material_multiple_materials() -> Result<()> {
     // Create separate tasks for each material
     let wood_task = Task::new(Uuid::new_v4().to_string());
     let metal_task = Task::new(Uuid::new_v4().to_string());
+    let wood_task_arc = Arc::new(RwLock::new(wood_task));
+    let metal_task_arc = Arc::new(RwLock::new(metal_task));
     
-    wood_task.add_material_to_compute("Wood".to_string());
-    metal_task.add_material_to_compute("Metal".to_string());
+    wood_task_arc.read().add_material_to_compute("Wood".to_string());
+    metal_task_arc.read().add_material_to_compute("Metal".to_string());
     
     // Process wood material
     let wood_result = compute_material(
         wood_tiles,
         wood_stock,
         &configuration,
-        &wood_task,
+        wood_task_arc.clone(),
         "Wood",
     ).await;
     
@@ -196,7 +204,7 @@ async fn test_compute_material_multiple_materials() -> Result<()> {
         metal_tiles,
         metal_stock,
         &configuration,
-        &metal_task,
+        metal_task_arc.clone(),
         "Metal",
     ).await;
     
@@ -205,8 +213,8 @@ async fn test_compute_material_multiple_materials() -> Result<()> {
     assert!(metal_result.is_ok(), "Metal material computation should succeed");
     
     // Both tasks should show 100% completion for their respective materials
-    assert_eq!(wood_task.percentage_done(), 100, "Wood task should be 100% complete");
-    assert_eq!(metal_task.percentage_done(), 100, "Metal task should be 100% complete");
+    assert_eq!(wood_task_arc.read().percentage_done(), 100, "Wood task should be 100% complete");
+    assert_eq!(metal_task_arc.read().percentage_done(), 100, "Metal task should be 100% complete");
     
     Ok(())
 }
@@ -220,7 +228,8 @@ async fn test_compute_material_large_dataset() -> Result<()> {
     
     let task_id = Uuid::new_v4().to_string();
     let task = Task::new(task_id.clone());
-    task.add_material_to_compute("Plywood".to_string());
+    let task_arc = Arc::new(RwLock::new(task));
+    task_arc.read().add_material_to_compute("Plywood".to_string());
     
     // Measure execution time
     let start = std::time::Instant::now();
@@ -229,7 +238,7 @@ async fn test_compute_material_large_dataset() -> Result<()> {
         tiles,
         stock_tiles,
         &configuration,
-        &task,
+        task_arc.clone(),
         "Plywood",
     ).await;
     
@@ -237,7 +246,7 @@ async fn test_compute_material_large_dataset() -> Result<()> {
     
     // Verify successful completion
     assert!(result.is_ok(), "Large dataset computation should succeed");
-    assert_eq!(task.percentage_done(), 100, "Large dataset should complete to 100%");
+    assert_eq!(task_arc.read().percentage_done(), 100, "Large dataset should complete to 100%");
     
     // Verify reasonable execution time (should complete within 5 seconds for this test)
     assert!(duration.as_secs() < 5, "Computation should complete within reasonable time");

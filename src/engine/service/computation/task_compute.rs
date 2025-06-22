@@ -47,23 +47,23 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
     let task_arc = running_tasks.get_task(&task_id)
         .ok_or_else(|| AppError::invalid_input(&format!("Task {} not found in running tasks", task_id)))?;
     
-    // Update task with computation data
+    // Update task with computation data and set to running status
     {
         let mut task = task_arc.write();
         task.factor = factor;
-        // Build initial solution structure
-        // task.build_solution(); // This would be implemented in task methods
+        
+        // Set task to running status (critical for status progression!)
+        if let Err(e) = task.set_running_status() {
+            warn!("Failed to set task {} to running status: {}", task_id, e);
+            return Err(e);
+        }
     }
     
-    debug!("Task {} found and updated for computation", task_id);
+    debug!("Task {} set to running status for computation", task_id);
 
     // Group tiles by material (Java lines ~245-246)
     let tiles_per_material = CollectionUtils::get_tile_dimensions_per_material(&tiles)?;
     let stock_per_material = CollectionUtils::get_tile_dimensions_per_material(&stock_tiles)?;
-
-    // Set material data on task (Java lines ~247-248)
-    // Note: In a real implementation, we'd need to update the task in RunningTasks
-    // For now, we'll work with the local copy
     
     // Find materials that have both tiles and stock (Java lines ~249-260)
     let mut all_materials = HashSet::new();
@@ -87,6 +87,25 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
         }
     }
 
+    // Add materials to task for tracking (Java equivalent)
+    {
+        let task = task_arc.read();
+        for material in &materials_to_compute {
+            task.add_material_to_compute(material.clone());
+        }
+    }
+
+    // If no materials to compute, finish immediately
+    if materials_to_compute.is_empty() {
+        warn!("No materials to compute for task {}", task_id);
+        let task = task_arc.read();
+        task.terminate_error();
+        return Ok(CalculationSubmissionResult::new(
+            crate::models::enums::status_code::StatusCode::InvalidTiles,
+            task_id
+        ));
+    }
+
     // Spawn computation tasks for each material (Java lines ~261-270)
     let mut computation_handles: Vec<JoinHandle<Result<()>>> = Vec::new();
     
@@ -98,7 +117,6 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
             let material_tiles_clone = material_tiles.clone();
             let material_stock_clone = material_stock.clone();
             let configuration_clone = request.configuration.clone();
-            let task_clone = task_arc.clone();
             let material_clone = material.clone();
             let task_id_clone = task_id.clone();
             
@@ -109,16 +127,11 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
                     // Get task from running tasks for the computation
                     let running_tasks = get_running_tasks_instance();
                     if let Some(task_arc) = running_tasks.get_task(&task_id_clone) {
-                        // Clone the task data we need without holding the lock
-                        let task_data = {
-                            let task = task_arc.read();
-                            task.clone()
-                        };
                         material_compute::compute_material(
                             material_tiles_clone,
                             material_stock_clone,
                             config,
-                            &task_data,
+                            task_arc,
                             &material_clone,
                         ).await
                     } else {
@@ -132,10 +145,6 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
             computation_handles.push(handle);
         }
     }
-    
-    // Note: In the Java version, the method doesn't wait for completion here
-    // The threads run independently and update the task status
-    // For now, we'll return the submission result immediately
     
     info!("Spawned {} material computation tasks for task: {}", computation_handles.len(), task_id);
     
@@ -207,7 +216,7 @@ pub async fn compute_task_simple(request: CalculationRequest, task_id: String) -
                             material_tiles,
                             material_stock_clone,
                             config,
-                            &task_data,
+                            task_arc,
                             &material_clone,
                         ).await;
                     }

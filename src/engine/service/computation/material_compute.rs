@@ -28,7 +28,7 @@ pub async fn compute_material(
     tiles: Vec<TileDimensions>,
     stock_tiles: Vec<TileDimensions>,
     configuration: &Configuration,
-    task: &Task,
+    task_arc: std::sync::Arc<parking_lot::RwLock<Task>>,
     material: &str,
 ) -> Result<()> {
     use tokio::time::Duration;
@@ -60,11 +60,20 @@ pub async fn compute_material(
     
     info!("Generated {} permutations for material {}", permutations.len(), material);
     
+    // Get task ID for logging
+    let task_id = {
+        let task = task_arc.read();
+        task.id.clone()
+    };
+    
     // Process each permutation
     for (permutation_index, permutation) in permutations.iter().enumerate() {
         // Update task progress
         let progress = (permutation_index as f64 / permutations.len() as f64 * 100.0) as i32;
-        task.set_material_percentage_done(material.to_string(), progress);
+        {
+            let task = task_arc.read();
+            task.set_material_percentage_done(material.to_string(), progress);
+        }
         
         // Process the permutation
         process_permutation(
@@ -72,7 +81,7 @@ pub async fn compute_material(
             permutation_index,
             &stock_tiles,
             configuration,
-            &task.id(),
+            &task_id,
             material,
         ).await?;
         
@@ -81,7 +90,10 @@ pub async fn compute_material(
     }
 
     // Mark material computation as complete
-    task.set_material_percentage_done(material.to_string(), 100);
+    {
+        let task = task_arc.read();
+        task.set_material_percentage_done(material.to_string(), 100);
+    }
 
     info!("Completed material computation for: {} with {} permutations", material, permutations.len());
     Ok(())
