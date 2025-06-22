@@ -30,14 +30,19 @@ pub struct CutListOptimizerServiceImpl {
     /// Service shutdown status
     is_shutdown: AtomicBool,
     /// Thread coordination semaphore
+    #[allow(dead_code)]
     thread_semaphore: Arc<Semaphore>,
     /// Maximum threads per task
+    #[allow(dead_code)]
     max_threads_per_task: usize,
     /// Service start time
+    #[allow(dead_code)]
     start_time: DateTime<Utc>,
     /// Running tasks manager (singleton pattern)
+    #[allow(dead_code)]
     running_tasks: Option<Arc<RunningTasks>>,
     /// Watch dog for monitoring
+    #[allow(dead_code)]
     watch_dog: Option<Arc<WatchDog>>,
     /// Date format for task ID generation
     date_format: String,
@@ -109,6 +114,7 @@ impl CutListOptimizerServiceImpl {
     }
 
     /// Check if thread is eligible to start (ported from Java)
+    #[allow(dead_code)]
     pub(crate) fn is_thread_eligible_to_start(&self, _group: &str, _task: &crate::models::task::structs::Task, _material: &str) -> bool {
         // Simplified implementation - in full version would check thread group rankings
         true

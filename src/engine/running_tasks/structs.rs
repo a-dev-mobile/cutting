@@ -48,6 +48,7 @@ pub struct RunningTasks {
     pub(crate) start_time: SystemTime,
     
     /// Task execution statistics (protected by mutex for complex operations)
+    #[allow(dead_code)]
     pub(crate) stats: Mutex<TaskStats>,
 }
 

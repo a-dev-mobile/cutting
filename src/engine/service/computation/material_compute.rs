@@ -17,7 +17,6 @@ use crate::{
 
 use super::{
     grouping::CollectionUtils,
-    permutation_utils::PermutationUtils,
 };
 
 /// Compute optimization for a specific material

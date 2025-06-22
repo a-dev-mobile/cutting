@@ -187,7 +187,7 @@ mod core_implementation_tests {
     }
 
     #[test]
-    fn test_get_stats() {
+    fn test_get_picker_stats() {
         let picker = create_test_picker().unwrap();
         let stats = picker.get_stats().unwrap();
         

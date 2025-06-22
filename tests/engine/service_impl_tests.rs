@@ -315,7 +315,7 @@ async fn test_terminate_task_invalid_status() {
 }
 
 #[tokio::test]
-async fn test_get_stats() {
+async fn test_get_service_stats() {
     use cutlist_optimizer_cli::{
         models::{Task},
         engine::running_tasks::{TaskManager, TaskCleanup, get_running_tasks_instance},

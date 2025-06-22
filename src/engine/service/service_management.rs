@@ -4,8 +4,6 @@
 //! and provides utilities for service lifecycle operations.
 
 use crate::{
-    errors::Result,
-    models::Stats,
 };
 use super::core::CutListOptimizerServiceImpl;
 

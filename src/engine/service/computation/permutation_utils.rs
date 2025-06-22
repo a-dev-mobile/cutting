@@ -4,7 +4,6 @@
 //! in tile arrangements and groupings.
 
 use crate::models::tile_dimensions::structs::TileDimensions;
-use crate::models::enums::orientation::Orientation;
 
 /// Utility struct for permutation-related operations
 pub struct PermutationUtils;
