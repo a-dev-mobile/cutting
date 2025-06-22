@@ -31,48 +31,88 @@ pub async fn compute_material(
     task: &Task,
     material: &str,
 ) -> Result<()> {
+    use tokio::time::Duration;
+    
     debug!("Computing material: {} with {} tiles and {} stock tiles", 
            material, tiles.len(), stock_tiles.len());
 
-    // Generate groups using existing CollectionUtils::generate_groups()
-    let groups = CollectionUtils::generate_groups(&tiles, &stock_tiles, task)?;
+    // Validate inputs
+    if tiles.is_empty() {
+        return Err(crate::errors::CoreError::InvalidInput { 
+            details: "Tiles array cannot be empty".to_string() 
+        }.into());
+    }
+
+    if stock_tiles.is_empty() {
+        return Err(crate::errors::CoreError::InvalidInput { 
+            details: "Stock tiles array cannot be empty".to_string() 
+        }.into());
+    }
+
+    // Group tiles by dimensions to create GroupedTileDimensions
+    let groups = group_tiles_by_dimensions(&tiles)?;
     
-    // Get distinct grouped tile dimensions (Java equivalent)
+    // Get distinct grouped tile dimensions
     let distinct_groups = get_distinct_grouped_tile_dimensions(&groups, configuration)?;
     
-    // Log group information (matching Java format)
-    let mut log_message = String::new();
-    let mut group_index = 0;
-    for (group, count) in &distinct_groups {
-        group_index += 1;
-        log_message.push_str(&format!(" group[{}:{}*{}] ", group_index, group, count));
-    }
-    
-    debug!("Task[{}] Material[{}] Groups: {}", task.id, material, log_message);
-    
-    // Generate permutations (stub for now)
+    // Generate permutations
     let permutations = generate_permutations_stub(&distinct_groups)?;
     
-    debug!("Task[{}] Material[{}] Generated {} permutations", 
-           task.id, material, permutations.len());
+    info!("Generated {} permutations for material {}", permutations.len(), material);
     
-    // Process each permutation (lambda equivalent from Java)
+    // Process each permutation
     for (permutation_index, permutation) in permutations.iter().enumerate() {
+        // Update task progress
+        let progress = (permutation_index as f64 / permutations.len() as f64 * 100.0) as i32;
+        task.set_material_percentage_done(material.to_string(), progress);
+        
+        // Process the permutation
         process_permutation(
             permutation,
             permutation_index,
             &stock_tiles,
             configuration,
-            task,
+            &task.id(),
             material,
         ).await?;
+        
+        // Small delay to simulate computation work
+        tokio::time::sleep(Duration::from_millis(10)).await;
     }
 
-    // Set material status to completed (100%)
+    // Mark material computation as complete
     task.set_material_percentage_done(material.to_string(), 100);
-    
-    info!("Completed material computation for: {} with {} groups", material, groups.len());
+
+    info!("Completed material computation for: {} with {} permutations", material, permutations.len());
     Ok(())
+}
+
+/// Group tiles by their dimensions to create GroupedTileDimensions
+fn group_tiles_by_dimensions(tiles: &[TileDimensions]) -> Result<Vec<GroupedTileDimensions>> {
+    let mut groups = Vec::new();
+    let mut group_id = 0;
+    
+    // For now, create a simple grouping where each unique tile dimension gets its own group
+    let mut seen_dimensions: HashMap<(i32, i32, String), i32> = HashMap::new();
+    
+    for tile in tiles {
+        let key = (tile.width, tile.height, tile.material.clone());
+        
+        let group = if let Some(&existing_group) = seen_dimensions.get(&key) {
+            existing_group
+        } else {
+            group_id += 1;
+            seen_dimensions.insert(key, group_id);
+            group_id
+        };
+        
+        groups.push(GroupedTileDimensions {
+            tile_dimensions: tile.clone(),
+            group,
+        });
+    }
+    
+    Ok(groups)
 }
 
 /// Get distinct grouped tile dimensions
@@ -113,11 +153,11 @@ async fn process_permutation(
     permutation_index: usize,
     _stock_tiles: &[TileDimensions],
     _configuration: &Configuration,
-    task: &Task,
+    task_id: &str,
     material: &str,
 ) -> Result<()> {
     trace!("Processing permutation {} for task[{}] material[{}]", 
-           permutation_index, task.id, material);
+           permutation_index, task_id, material);
 
     // TODO: Implement the actual lambda logic from Java:
     // 1. Create StockPanelPicker (stub for now)
@@ -129,14 +169,14 @@ async fn process_permutation(
     let stock_solutions = generate_stock_solutions_stub()?;
     
     debug!("Task[{}] Material[{}] Permutation[{}] Generated {} stock solutions", 
-           task.id, material, permutation_index, stock_solutions.len());
+           task_id, material, permutation_index, stock_solutions.len());
     
     // Process each stock solution
     for (stock_index, _stock_solution) in stock_solutions.iter().enumerate() {
         process_stock_solution(
             stock_index,
             permutation_index,
-            task,
+            task_id,
             material,
         ).await?;
     }
@@ -159,11 +199,11 @@ fn generate_stock_solutions_stub() -> Result<Vec<String>> {
 async fn process_stock_solution(
     stock_index: usize,
     permutation_index: usize,
-    task: &Task,
+    task_id: &str,
     material: &str,
 ) -> Result<()> {
     trace!("Processing stock solution {} for permutation {} task[{}] material[{}]", 
-           stock_index, permutation_index, task.id, material);
+           stock_index, permutation_index, task_id, material);
 
     // TODO: Implement the actual stock solution processing:
     // 1. Create CutListThreadBuilder
@@ -173,7 +213,7 @@ async fn process_stock_solution(
     
     // For now, just log the processing
     debug!("Task[{}] Material[{}] Processing stock[{}] permutation[{}]", 
-           task.id, material, stock_index, permutation_index);
+           task_id, material, stock_index, permutation_index);
 
     Ok(())
 }

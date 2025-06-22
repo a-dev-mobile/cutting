@@ -20,15 +20,16 @@ use super::{
     material_compute,
 };
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
+use parking_lot::RwLock;
 use tokio::task::JoinHandle;
 
 /// Main computation method (migrated from Java compute() method around lines 200-250)
 /// 
 /// This function implements the core logic from the Java CutListOptimizerServiceImpl.compute() method:
 /// 1. Converts panels to tiles using DimensionUtils
-/// 2. Creates a new Task with the given task_id
-/// 3. Adds the task to RunningTasks
+/// 2. Gets the existing task from RunningTasks (already created in submit_task)
+/// 3. Updates task with computation data
 /// 4. Groups tiles by material using CollectionUtils
 /// 5. Spawns async computation for each material
 pub async fn compute_task(request: CalculationRequest, task_id: String) -> Result<CalculationSubmissionResult> {
@@ -41,19 +42,20 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
         6 // MAX_ALLOWED_DIGITS from Java
     )?;
 
-    // Create task (Java line ~241)
-    let mut task = Task::new(task_id.clone());
-    task.calculation_request = Some(request.clone());
-    task.factor = factor;
-    
-    // Build initial solution structure
-    // task.build_solution(); // This would be implemented in task methods
-    
-    // Add task to running tasks (Java line ~244)
+    // Get the existing task from running tasks (already created in submit_task)
     let running_tasks = get_running_tasks_instance();
-    running_tasks.add_task(task.clone())?;
+    let task_arc = running_tasks.get_task(&task_id)
+        .ok_or_else(|| AppError::invalid_input(&format!("Task {} not found in running tasks", task_id)))?;
     
-    debug!("Task {} added to running tasks", task_id);
+    // Update task with computation data
+    {
+        let mut task = task_arc.write();
+        task.factor = factor;
+        // Build initial solution structure
+        // task.build_solution(); // This would be implemented in task methods
+    }
+    
+    debug!("Task {} found and updated for computation", task_id);
 
     // Group tiles by material (Java lines ~245-246)
     let tiles_per_material = CollectionUtils::get_tile_dimensions_per_material(&tiles)?;
@@ -96,20 +98,32 @@ pub async fn compute_task(request: CalculationRequest, task_id: String) -> Resul
             let material_tiles_clone = material_tiles.clone();
             let material_stock_clone = material_stock.clone();
             let configuration_clone = request.configuration.clone();
-            let task_clone = task.clone();
+            let task_clone = task_arc.clone();
             let material_clone = material.clone();
+            let task_id_clone = task_id.clone();
             
             debug!("Spawning computation for material: {}", material);
             
             let handle = tokio::spawn(async move {
                 if let Some(config) = configuration_clone.as_ref() {
-                    material_compute::compute_material(
-                        material_tiles_clone,
-                        material_stock_clone,
-                        config,
-                        &task_clone,
-                        &material_clone,
-                    ).await
+                    // Get task from running tasks for the computation
+                    let running_tasks = get_running_tasks_instance();
+                    if let Some(task_arc) = running_tasks.get_task(&task_id_clone) {
+                        // Clone the task data we need without holding the lock
+                        let task_data = {
+                            let task = task_arc.read();
+                            task.clone()
+                        };
+                        material_compute::compute_material(
+                            material_tiles_clone,
+                            material_stock_clone,
+                            config,
+                            &task_data,
+                            &material_clone,
+                        ).await
+                    } else {
+                        Err(AppError::invalid_input(&format!("Task {} not found", task_id_clone)))
+                    }
                 } else {
                     Err(AppError::invalid_input("Configuration is required for material computation"))
                 }
@@ -181,13 +195,22 @@ pub async fn compute_task_simple(request: CalculationRequest, task_id: String) -
             
             tokio::spawn(async move {
                 if let Some(config) = configuration_clone.as_ref() {
-                    let _ = material_compute::compute_material(
-                        material_tiles,
-                        material_stock_clone,
-                        config,
-                        &Task::new(task_id_clone), // Simplified for testing
-                        &material_clone,
-                    ).await;
+                    // Get task from running tasks for the computation
+                    let running_tasks = get_running_tasks_instance();
+                    if let Some(task_arc) = running_tasks.get_task(&task_id_clone) {
+                        // Clone the task data we need without holding the lock
+                        let task_data = {
+                            let task = task_arc.read();
+                            task.clone()
+                        };
+                        let _ = material_compute::compute_material(
+                            material_tiles,
+                            material_stock_clone,
+                            config,
+                            &task_data,
+                            &material_clone,
+                        ).await;
+                    }
                 }
             });
         }

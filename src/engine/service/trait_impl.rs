@@ -57,6 +57,10 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
     }
 
     async fn submit_task(&self, request: CalculationRequest) -> Result<CalculationSubmissionResult> {
+        use crate::engine::running_tasks::{get_running_tasks_instance, TaskManager};
+        use crate::models::task::Task;
+        use crate::logging::macros::info;
+        
         self.ensure_initialized()?;
         self.ensure_not_shutdown()?;
 
@@ -70,6 +74,16 @@ impl CutListOptimizerService for CutListOptimizerServiceImpl {
 
         // Generate task_id using core.rs method
         let task_id = self.generate_task_id();
+
+        // Create task immediately and add to running tasks (like Java)
+        let mut task = Task::new(task_id.clone());
+        task.calculation_request = Some(request.clone());
+        
+        // Add task to running tasks before spawning computation
+        let running_tasks = get_running_tasks_instance();
+        running_tasks.add_task(task)?;
+        
+        info!("Task {} added to running tasks before computation", task_id);
 
         // Launch tokio::spawn with compute_task in background
         let request_clone = request.clone();
