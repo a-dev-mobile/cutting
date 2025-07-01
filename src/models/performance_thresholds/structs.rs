@@ -5,7 +5,7 @@ pub struct PerformanceThresholds {
     /// Maximum number of simultaneous tasks
     pub max_simultaneous_tasks: usize,
     
-    /// Maximum number of threads per task
+    /// Maximum number of threads per task // автоматически определяется
     pub max_simultaneous_threads: usize,
     
     /// Interval between thread status checks (milliseconds)
